@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學習共同體公開課觀察系統(結合AI分析)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- AI 分析需要 Marked.js 將 Markdown 轉為 HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f0f4f8; color: #334155; }
+        .card { background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); padding: 1.5rem; }
+        .section-header { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #1e293b; display: flex; align-items: center; }
+        .section-header .fa-icon-spacing { margin-right: 0.5em; }
+        .student-seat {
+            transition: all 0.3s ease; border: 2px solid transparent; min-height: 70px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background-color: #e0f2fe; color: #0c4a6e; cursor: pointer;
+        }
+        .student-seat:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); background-color: #bae6fd; }
+        
+        #teacherSeat {
+            transition: all 0.3s ease; border: 2px solid transparent;
+            display: flex; flex-direction: row; justify-content: center; align-items: center;
+            background-color: #fdf2f8 !important; color: #9d174d !important; border-radius: 0.5rem !important;
+            padding: 0.4rem 0.8rem !important; font-size: 0.9rem; min-height: auto !important; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); cursor: pointer;
+        }
+        #teacherSeat:hover { transform: translateY(-2px); box-shadow: 0 4px 8px -2px rgba(0,0,0,0.1); background-color: #fce7f3 !important; }
+        #teacherSeat.selected-seat { border-color: #ec4899 !important; background-color: #fbcfe8 !important; color: #831843 !important; transform: translateY(-1px); box-shadow: 0 2px 4px -1px rgba(0,0,0,0.1); }
+        #teacherSeat .fa-user-tie { margin-right: 0.4em; }
+
+        .student-seat.selected-seat { border-color: #2563eb; background-color: #bfdbfe; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        .role-badge {
+            position: absolute; top: -0.5rem; right: -0.5rem; font-size: 0.7rem; padding: 0.2rem 0.4rem; 
+            border-radius: 0.5rem; white-space: normal; text-align: center;  
+            min-width: 40px; max-width: 80px; line-height: 1.2; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .action-btn {
+            transition: all 0.2s ease; padding: 0.5rem; border-width: 1px;
+            border-radius: 0.375rem; font-size: 0.875rem; display: flex;
+            align-items: center; min-height: 40px; justify-content: center; 
+            text-align: center; line-height: 1.2; white-space: normal; 
+        }
+        .action-btn:hover:not(:disabled) { transform: translateY(-2px); }
+        .action-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .mode-btn { border-color: #FBBF24; background-color: #FEF3C7; color: #B45309; }
+        .mode-btn:hover:not(:disabled) { background-color: #FDE68A; }
+        .mode-btn.selected { background-color: #F59E0B; color: white; border-color: #D97706; transform: translateY(-1px); }
+
+        .type-btn { border-color: #60A5FA; background-color: #EFF6FF; color: #1D4ED8; }
+        .type-btn:hover:not(:disabled) { background-color: #DBEAFE; }
+        .type-btn.selected { background-color: #3B82F6; color: white; border-color: #2563EB; transform: translateY(-1px); }
+        
+        .period-btn { transition: all 0.2s ease; }
+        .period-btn.selected { background-color: #3b82f6; color: white; border-color: #2563eb; }
+        
+        #localObservationsPreviewTable th, #localObservationsPreviewTable td { border: 1px solid #e2e8f0; padding: 0.375rem; text-align: left; font-size: 0.8rem; vertical-align: top; }
+        #localObservationsPreviewTable th { background-color: #f1f5f9; position: sticky; top: 0; z-index: 10;}
+        .obs-item { margin-bottom: 0.25rem; padding: 0.125rem; border-radius: 0.125rem; word-break: break-word; }
+        .obs-item:hover { background-color: #e0e7ff; }
+        .obs-item-text-four-learn { color: #b45309; }
+        .obs-item-text-general { color: #1d4ed8; }
+        .obs-item-text-other { color: #57534e; } 
+        .obs-actions button { margin-left: 0.25rem; padding: 0.05rem 0.2rem; font-size: 0.7rem; background: none; border: none; cursor: pointer; }
+        
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 1.5rem; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 0.5rem; position: relative; }
+        .modal-content h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;}
+        .modal-content p, .modal-content li { font-size: 1rem; line-height: 1.7; margin-bottom: 0.75rem;}
+        .modal-content ul { list-style-type: disc; padding-left: 2rem; }
+        .modal-content ol { list-style-type: decimal; padding-left: 2rem; }
+        .modal-content h1, .modal-content h2, .modal-content h3 { margin-top: 1rem; margin-bottom: 0.5rem; font-weight: bold; }
+        .modal-content h1 { font-size: 1.5em; } .modal-content h2 { font-size: 1.25em; } .modal-content h3 { font-size: 1.1em; }
+        .modal-content code { background-color: #e5e7eb; padding: 0.2em 0.4em; margin: 0; font-size: 85%; border-radius: 6px; }
+        .modal-content a { color: #2563eb; text-decoration: underline; }
+        .modal-content a:hover { color: #1d4ed8; }
+
+        .close-button { color: #aaa; float: right; font-size: 1.75rem; font-weight: bold; position: absolute; top: 1rem; right: 1.5rem; z-index: 10;}
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+
+        .student-edit-role-btn { padding: 0.3rem 0.6rem; margin: 0.1rem; border: 1px solid #cbd5e1; border-radius: 0.25rem; font-size: 0.75rem; cursor: pointer; transition: background-color 0.2s; }
+        .student-edit-role-btn:hover { background-color: #e2e8f0; }
+        .student-edit-role-btn.selected { background-color: #3b82f6; color: white; border-color: #2563eb; }
+        .student-edit-block { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
+        .student-edit-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea, select { display: block; width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem; line-height: 1.25rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; box-shadow: inset 0 1px 2px 0 rgba(0,0,0,0.05); transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
+        input:focus, textarea:focus, select:focus { outline: 2px solid transparent; outline-offset: 2px; border-color: #2563eb; box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25); }
+        label { display: block; font-size: 0.875rem; font-weight: 500; color: #475569; margin-bottom: 0.25rem; }
+        .fa-icon-spacing { margin-right: 0.3em; } 
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; margin-bottom: 0.25rem; background-color: #f8fafc; }
+        .file-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 0.5rem;}
+        .delete-file-btn { background: none; border: none; color: #ef4444; cursor: pointer; padding:0.2rem; }
+        .delete-file-btn:hover { color: #dc2626; }
+
+        .info-btn { background: none; border: none; color: #4b5563; cursor: pointer; margin-left: 0.5rem; padding: 0.2rem; }
+        .info-btn:hover { color: #1d4ed8; }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-slate-700">
+    <div class="min-h-screen">
+        <header class="bg-blue-600 text-white py-4 shadow-lg">
+            <div class="container mx-auto px-4 flex justify-between items-center">
+                <div class="flex-1"></div> <!-- Spacer -->
+                <h1 class="text-2xl font-bold text-center flex-grow"><i class="fas fa-chalkboard-teacher fa-icon-spacing"></i>學習共同體公開課觀察系統(結合AI分析)</h1>
+                <div class="flex-1 text-right">
+                    <a href="https://www.canva.com/design/DAGs051_Wno/PBFof_NCp5Op-4O4JlaV2w/view?utm_content=DAGs051_Wno&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h7922ed55bd" 
+                       target="_blank" 
+                       title="使用說明書"
+                       class="text-white hover:text-blue-200 transition-colors h-10 w-10 inline-flex items-center justify-center rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                        <i class="fas fa-question-circle fa-lg"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <main class="container mx-auto px-4 py-8">
+            <!-- 單一記錄區 -->
+            <div id="singleRecordSection">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <section class="card">
+                        <h2 class="section-header"><i class="fas fa-info-circle fa-icon-spacing"></i>基本資訊</h2>
+                        <div class="space-y-4">
+                            <div><label for="courseName">課程名稱</label><input type="text" id="courseName"></div>
+                            <div><label for="teacher">授課教師</label><input type="text" id="teacher"></div>
+                            <div><label for="observationClass">觀課班級</label><input type="text" id="observationClass"></div>
+                            <div><label for="observerName">觀課人員</label><input type="text" id="observerName"></div>
+                            <div><label for="observationDate">觀課日期</label><input type="date" id="observationDate"></div>
+                            <div>
+                                <label>觀課節次 (可多選)</label>
+                                <div id="observationPeriods" class="flex flex-wrap gap-2 pt-1">
+                                    <button data-period="一" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">一</button>
+                                    <button data-period="二" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">二</button>
+                                    <button data-period="三" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">三</button>
+                                    <button data-period="四" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">四</button>
+                                    <button data-period="五" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">五</button>
+                                    <button data-period="六" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">六</button>
+                                    <button data-period="七" class="period-btn px-3 py-1 border border-gray-300 rounded-md text-sm">七</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="card">
+                        <h2 class="section-header"><i class="fas fa-users-cog fa-icon-spacing"></i>座位表與角色設定</h2>
+                        <div class="space-y-4">
+                            <div><label>座位排列</label><div class="flex space-x-4"><div><label for="rowCount">列數 (上限5)</label><input type="number" id="rowCount" min="1" max="5" value="2" class="w-20"></div><div><label for="colCount">行數 (上限5)</label><input type="number" id="colCount" min="1" max="5" value="2" class="w-20"></div></div></div>
+                            <div><label for="groupName">小組名稱</label><input type="text" id="groupName" placeholder="例如：第一組"></div>
+                            <button id="updateSeating" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors"><i class="fas fa-sync-alt fa-icon-spacing"></i>更新座位表</button>
+                            
+                            <div class="mt-4">
+                                <h3 class="font-medium mb-2 text-gray-700">預設座位角色</h3>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>促進者</div>
+                                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>支持者</div>
+                                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>表達者</div>
+                                    <div class="flex items-center"><div class="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>反思者</div>
+                                </div>
+                                <h3 class="font-medium mt-4 mb-2 text-gray-700">自定義角色</h3>
+                                <div id="customRoles" class="space-y-2 mb-3"></div>
+                                <div class="flex space-x-2"><input type="text" id="newRoleName" placeholder="新角色名稱" class="flex-1"><button id="addCustomRole" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md text-sm transition-colors"><i class="fas fa-plus fa-icon-spacing"></i>新增</button></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <section class="card mb-6">
+                    <h2 class="section-header"><i class="fas fa-lightbulb fa-icon-spacing"></i>學習與省思</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div><label for="learnings">從這堂課學到理念及方法</label><textarea id="learnings" rows="4"></textarea></div>
+                        <div><label for="reflections">我的省思</label><textarea id="reflections" rows="4"></textarea></div>
+                    </div>
+                </section>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <section class="lg:col-span-1 card">
+                        <div class="flex justify-between items-center mb-2">
+                            <h2 class="section-header !mb-0"><i class="fas fa-border-all fa-icon-spacing"></i>觀察對象</h2>
+                            <div id="displayGroupName" class="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full"></div>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg my-4">
+                            <div class="text-center mb-2">
+                                <div class="font-medium"><i class="fas fa-chalkboard fa-icon-spacing"></i>講臺</div>
+                            </div>
+                             <button id="teacherSeat" class="w-full" data-id="teacher">
+                                <i class="fas fa-user-tie"></i> 授課教師
+                            </button>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-2">點擊學生座位或授課教師以選取 (可多選)</p>
+                        <div class="flex space-x-2 mb-4">
+                            <button id="selectAllStudentsBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-md text-xs"><i class="far fa-check-square fa-icon-spacing"></i>全選學生</button>
+                            <button id="deselectAllTargetsBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-md text-xs"><i class="far fa-square fa-icon-spacing"></i>取消全選</button>
+                        </div>
+                        <div id="seatingContainer" class="mb-4"></div>
+                        <div id="studentInfoEditContainer" class="mt-6">
+                            <div id="studentInfoEdit" class="p-4 bg-gray-50 rounded-lg hidden">
+                                <h3 class="font-medium mb-3 text-gray-700">編輯選取學生資訊 (<span id="selectedStudentCountDisplay">0</span>位)</h3>
+                                <div id="studentEditFormContainer" class="space-y-4 max-h-60 overflow-y-auto pr-2"></div>
+                                <button id="updateStudentInfo" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm transition-colors"><i class="fas fa-save fa-icon-spacing"></i>更新選取學生資訊</button>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="lg:col-span-2 card space-y-6">
+                        <div>
+                            <div class="flex justify-between items-center mb-4"><h2 class="section-header !mb-0"><i class="fas fa-edit fa-icon-spacing"></i>觀察記錄</h2><div><span id="currentSelectionDisplay" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">未選擇角色</span></div></div>
+                        </div>
+                        <div>
+                            <div class="mb-3"><label for="observationTime">時間點</label><input type="time" id="observationTime" step="1"></div>
+                            <div id="fourLearningModesSection" class="p-4 bg-amber-50 rounded-lg">
+                                <h3 class="font-medium mb-3 text-amber-700"><i class="fas fa-users fa-icon-spacing"></i>四學模式觀察記錄 (請選擇一個觀察項目，為個別或同時為多位角色記錄)</h3>
+                                <div id="fourLearningModeButtons" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="p-4 bg-sky-50 rounded-lg">
+                                <h3 class="font-medium mb-3 text-blue-700 flex items-center">
+                                    <i class="fas fa-tasks fa-icon-spacing"></i>一般觀察記錄 (請選擇一個觀察項目，為個別或同時為多位角色記錄)
+                                    <button id="generalObsInfoBtn" class="info-btn" title="一般觀察記錄說明"><i class="fas fa-info-circle"></i></button>
+                                </h3>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2" id="observationTypeButtons"></div>
+                                <input type="hidden" id="selectedObservationType" value="">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-3"><label for="observationContent">觀察內容 (用於觀察細節補充描述)</label><textarea id="observationContent" rows="3"></textarea></div>
+                            <button id="addObservationBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"><i class="fas fa-plus-circle fa-icon-spacing"></i>為選取角色新增觀察記錄</button>
+                        </div>
+                        <div><h3 class="font-medium mb-3 text-gray-700"><i class="fas fa-clipboard-list fa-icon-spacing"></i>已記錄觀察</h3><div id="localObservationsPreview" class="overflow-x-auto max-h-96"><table id="localObservationsPreviewTable" class="w-full table-fixed"><thead></thead><tbody></tbody></table><div id="noLocalObservations" class="text-center text-gray-500 py-3">尚無記錄</div></div></div>
+                    </section>
+                </div>
+            </div> <!-- End of singleRecordSection -->
+            
+            <!-- Export, Import, Reset Section -->
+            <section class="card mt-8">
+                <h2 class="section-header"><i class="fas fa-file-export fa-icon-spacing"></i>資料匯出、匯入與重設</h2>
+                <div class="flex flex-wrap justify-start items-center gap-3">
+                    <button id="exportDataToTxt" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-md transition-colors"><i class="fas fa-file-alt fa-icon-spacing"></i>匯出 (TXT)</button>
+                    <button id="exportDataToDoc" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-md transition-colors"><i class="fas fa-file-word fa-icon-spacing"></i>匯出 (DOC)</button>
+                    
+                    <input type="file" id="importSingleTxtFile" accept=".txt,.md" class="hidden">
+                    <button id="importTxtBtn" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-md transition-colors"><i class="fas fa-upload fa-icon-spacing"></i>匯入單筆TXT檔</button>
+                    
+                    <button id="clearResetData" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md transition-colors"><i class="fas fa-trash-restore fa-icon-spacing"></i>清除重設所有資料</button>
+                </div>
+            </section>
+
+            <!-- AI Analysis for Single Record Section -->
+            <section class="card mt-8">
+                <h2 class="section-header"><i class="fas fa-magic fa-icon-spacing"></i>AI 智慧分析 (單筆記錄)</h2>
+                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6" role="alert">
+                   <p>AI 分析會優先使用您在下方輸入的 API 金鑰。若留空，將使用系統內建的備用金鑰。建議申請並使用自己的免費金鑰以獲得更穩定的服務。</p>
+               </div>
+               <div>
+                   <div class="flex items-center">
+                       <label for="geminiApiKey" class="!mb-0">您的 Google Gemini API 金鑰 (選填)</label>
+                       <button id="getApiKeyBtn" class="info-btn" title="如何取得 API 金鑰？"><i class="fas fa-question-circle"></i></button>
+                   </div>
+                   <input type="text" id="geminiApiKey" placeholder="貼上您的 API 金鑰，若留空則使用備用金鑰">
+               </div>
+               <div class="mt-6">
+                   <button id="analyzeSingleBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md transition-colors"><i class="fas fa-robot fa-icon-spacing"></i>AI 分析上方本筆記錄</button>
+               </div>
+            </section>
+
+            <hr class="my-12 border-gray-300">
+
+            <!-- 整合區 -->
+            <section id="aggregationSection" class="card mb-6">
+                <h2 class="section-header"><i class="fas fa-folder-plus fa-icon-spacing"></i>多份TXT記錄整合匯出</h2>
+                <p class="text-sm text-slate-600 mb-4">
+                    此功能將允許多位觀察者上傳各自的TXT格式觀課記錄，系統會將它們整合輸出成一份TXT(Markdown語法)或DOC檔案。
+                    <br>檔案内將區分不同授課教師、班級、小組的記錄。請在下方輸入本次整合報告的「主要授課教師姓名」(用於檔名)。
+                </p>
+                <div class="mb-4">
+                    <label for="mainAggregatedTeacherName" class="font-medium">主要授課教師姓名 (用於檔名)</label>
+                    <input type="text" id="mainAggregatedTeacherName" placeholder="例如：王大明老師" class="mt-1">
+                </div>
+                <div class="mb-4">
+                    <input type="file" id="importMultipleTxtFilesForAggregation" accept=".txt,.md" multiple class="hidden">
+                    <button id="triggerSelectMultipleTxtBtn" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2 rounded-md transition-colors text-base">
+                        <i class="fas fa-file-upload fa-icon-spacing"></i>選擇多個TXT記錄檔
+                    </button>
+                </div>
+                <div id="stagedFilesListContainer" class="mb-4">
+                    <h3 class="font-medium mb-2 text-gray-700">待整合檔案列表 (<span id="stagedFileCount">0</span>個):</h3>
+                    <div id="stagedFilesList" class="max-h-40 overflow-y-auto border border-gray-200 p-2 rounded">
+                        <p class="text-gray-400 italic" id="noStagedFilesMsg">尚未選擇任何檔案</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-3 items-center">
+                     <button id="analyzeAggregatedBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-md transition-colors text-base disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-magic fa-icon-spacing"></i>AI 分析整合報告
+                    </button>
+                    <button id="startAggregationTxtBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md transition-colors text-base disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-cogs fa-icon-spacing"></i>整合並匯出 (TXT)
+                    </button>
+                    <button id="startAggregationDocBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md transition-colors text-base disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-file-word fa-icon-spacing"></i>整合並匯出 (DOC)
+                    </button>
+                </div>
+                <div id="aggregationProcessStatus" class="mt-3 text-sm text-blue-600"></div>
+            </section>
+        </main>
+        
+        <footer class="bg-gray-100 py-4 mt-8"><div class="container mx-auto px-4 text-center text-slate-600 text-sm">Copyright © 榮明杰退休校長 ✖ Liyuchiutiger Gongminshen</div></footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="editObservationModal" class="modal">
+        <div class="modal-content !max-w-xl">
+            <span class="close-button" id="closeEditModal">×</span>
+            <h3 class="text-lg font-medium mb-4">編輯觀察記錄</h3>
+            <input type="hidden" id="editingObsId"><input type="hidden" id="editingObsTargetId">
+            <div class="mb-3"><label for="editObsTime">時間點</label><input type="time" id="editObsTime" step="1"></div>
+            <div class="mb-3"><label for="editObsType">觀察類型</label><select id="editObsType"></select></div>
+            <div class="mb-3"><label for="editObsContent">觀察內容 (可選)</label><textarea id="editObsContent" rows="3"></textarea></div>
+            <button id="saveEditedObservation" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"><i class="fas fa-save fa-icon-spacing"></i>儲存變更</button>
+        </div>
+    </div>
+    <div id="generalObsInfoModal" class="modal">
+        <div class="modal-content !max-w-xl">
+            <span class="close-button" id="closeGeneralObsInfoModal">×</span>
+            <h3>一般觀察記錄說明</h3>
+            <p><strong>※高品質與高效課堂的十大策略：串借寫幫標礎碼試令備</strong></p>
+            <ul>
+                <li>(1)串：所有設計的活動都要讓學生有螺旋狀學習「經驗的串聯」，前一個活動是下一個活動的基礎。</li>
+                <li>(2)借：要有學生間、教師間、班級間示範的「借力使力」，讓學生具有可視化楷模學習的模仿機會。</li>
+                <li>(3)寫：鍛鍊學生「傾聽和書寫」記錄，才能確認學生的學習是否發生？</li>
+                <li>(4)幫：養成學生「互幫互學」夥伴關係的習慣。</li>
+                <li>(5)標：學生能精準清晰地描述「學習目標」。</li>
+                <li>(6)礎：善用課本鞏固「基礎概念」，掌握基礎概念以便尋找適當的挑戰問題。</li>
+                <li>(7)碼：善用「編碼學習」的策略，使困難的夥伴可以互搭鷹架。</li>
+                <li>(8)試：培養學生「應試的能力」以符合國情，刷題量要大，不可能都慢慢學。</li>
+                <li>(9)令：確認學生是否接收到「清晰的指令」，能說出接收到的指令。</li>
+                <li>(10)備：提昇學習「載體的準備度」，學生預習有其必要性，如：生字、定義、範例等，尤其是抽象知識。</li>
+            </ul>
+        </div>
+    </div>
+    <div id="aiAnalysisModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeAiModal">×</span>
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="aiModalTitle" class="text-xl font-semibold text-purple-700 mr-4"></h3>
+                <button id="copyAiResultBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md text-sm transition-colors flex-shrink-0">
+                    <i class="fas fa-copy fa-icon-spacing"></i>複製分析結果
+                </button>
+            </div>
+            <div id="aiModalContent" class="prose max-w-none max-h-[70vh] overflow-y-auto pr-4"></div>
+        </div>
+    </div>
+    <!-- New Modal for API Key Instructions -->
+    <div id="apiKeyInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeApiKeyModal">×</span>
+            <h3 class="text-xl font-semibold mb-4 text-blue-700">如何取得 Google Gemini API 金鑰？</h3>
+            <p>您可以透過 Google AI Studio 輕鬆取得免費的 API 金鑰，用於此工具的 AI 分析功能。過程很簡單，請依照以下步驟操作：</p>
+            <ol>
+                <li class="mb-4">
+                    <strong>1. 前往 Google AI Studio：</strong><br>
+                    點擊此連結 <a href="https://aistudio.google.com/" target="_blank">https://aistudio.google.com/</a> 並使用您的 Google 帳號登入。
+                </li>
+                <li class="mb-4">
+                    <strong>2. 同意條款：</strong><br>
+                    如果是第一次使用，您可能需要閱讀並同意 Google 的服務條款。
+                </li>
+                <li class="mb-4">
+                    <strong>3. 取得 API 金鑰：</strong><br>
+                    登入後，點擊頁面左上角的 <code>&lt; / &gt; Get API key</code> 按鈕。
+                </li>
+                <li class="mb-4">
+                    <strong>4. 建立新的 API 金鑰：</strong><br>
+                    在彈出的視窗中，點擊 <code>Create API key in new project</code> 按鈕。系統會立即為您生成一組新的金鑰。
+                </li>
+                <li class="mb-4">
+                    <strong>5. 複製金鑰：</strong><br>
+                    點擊新生成金鑰旁邊的複製圖示，將它複製到剪貼簿。它看起來會像這樣：<code>AIzaSy...</code>
+                </li>
+                <li class="mb-4">
+                    <strong>6. 貼回本工具：</strong><br>
+                    回到本觀察系統頁面，將複製好的金鑰貼到「您的 Google Gemini API 金鑰」輸入框中即可！
+                </li>
+            </ol>
+            <p class="text-sm text-gray-600"><strong>提示：</strong>這個金鑰是免費的，但有使用頻率限制（每分鐘約 60 次請求），對於個人觀課分析來說綽綽有餘。請妥善保管您的金鑰，不要分享給他人。</p>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // HIDE YOUR DEFAULT KEY HERE
+            const DEFAULT_BACKUP_API_KEY = "AIzaSyCerlnUOTQ4-5K6VRpugpRI1URcOF6ai2w";
+            
+            // --- State Variables ---
+            let selectedTargetIds = []; 
+            let students = {}; 
+            let localObservations = {}; 
+            let rowCount = 2;
+            let colCount = 2;
+            let groupName = "";
+            let customRoles = []; 
+            let selectedObservationTypeFullString = "";
+            let obsIdCounter = 0;
+            let stagedFilesForAggregation = []; 
+
+            // --- Constants ---
+            const OTHER_OBSERVATION_TYPE = { code: "O", name: "其他", fullType: "(O)其他: 其他觀察", displayShort: "(O)其他" };
+            const ALL_OBSERVATION_TYPES = [
+                { code: "1", name: "串", fullType: "(1)串: 所有設計的活動都要讓學生有「螺旋狀學習經驗的串」，前一個活動是下一個活動的基礎。", displayShort: "(1)串: 經驗串聯" }, 
+                { code: "2", name: "借", fullType: "(2)借: 要有學生間、教師間、班級間示範的「借力使力」，讓學生具有可視化楷模學習的模仿機會。", displayShort: "(2)借: 借力使力" },
+                { code: "3", name: "寫", fullType: "(3)寫: 鍛鍊學生「傾聽和書寫」記錄，才能確認學生的學習是否發生？", displayShort: "(3)寫: 傾聽書寫" }, 
+                { code: "4", name: "幫", fullType: "(4)幫: 養成學生「互幫互學」夥伴關係的習慣", displayShort: "(4)幫: 互幫互學" },
+                { code: "5", name: "標", fullType: "(5)標: 學生能精準清晰地描述「學習目標」", displayShort: "(5)標: 學習目標" }, 
+                { code: "6", name: "礎", fullType: "(6)礎: 善用課本鞏固「基礎概念」，掌握基礎概念以便尋找適當的挑戰問題。", displayShort: "(6)礎: 基礎概念" },
+                { code: "7", name: "碼", fullType: "(7)碼: 善用「編碼學習」的策略，使困難的夥伴可以互搭鷹架。", displayShort: "(7)碼: 編碼學習" }, 
+                { code: "8", name: "試", fullType: "(8)試: 培養學生「應試的能力」以符合國情，刷題量要大，不可能都慢慢學。", displayShort: "(8)試: 應試能力" },
+                { code: "9", name: "令", fullType: "(9)令: 確認學生是否接收到「清晰的指令」，能說出接收到的指令。", displayShort: "(9)令: 清晰指令" }, 
+                { code: "10", name: "備", fullType: "(10)備: 提昇學習「載體的準備度」，學生預習有其必要性，如：生字、定義、範例等，尤其是抽象知識。", displayShort: "(10)備: 準備度" },
+                { code: "A", name: "自", fullType: "(A)自: 學生自學", displayShort: "(A)自: 學生自學" }, 
+                { code: "B", name: "共", fullType: "(B)共: 組內共學", displayShort: "(B)共: 組內共學" },
+                { code: "C", name: "互", fullType: "(C)互: 組間互學", displayShort: "(C)互: 組間互學" }, 
+                { code: "D", name: "導", fullType: "(D)導: 教師導學", displayShort: "(D)導: 教師導學" },
+                OTHER_OBSERVATION_TYPE 
+            ];
+            const FOUR_LEARNING_MODES_CODES = ["A", "B", "C", "D"];
+            const fourLearningModeTypes = ALL_OBSERVATION_TYPES.filter(t => FOUR_LEARNING_MODES_CODES.includes(t.code));
+            const generalObservationTypes = ALL_OBSERVATION_TYPES.filter(t => !FOUR_LEARNING_MODES_CODES.includes(t.code) && t.code !== OTHER_OBSERVATION_TYPE.code);
+            const DEFAULT_ROW_COUNT = 2;
+            const DEFAULT_COL_COUNT = 2;
+            const TEACHER_TARGET_ID = 'teacher';
+
+            // --- DOM Elements ---
+            const courseNameEl = document.getElementById('courseName'), teacherEl = document.getElementById('teacher'), observationClassEl = document.getElementById('observationClass'), observerNameEl = document.getElementById('observerName'), observationDateEl = document.getElementById('observationDate'), observationPeriodsContainerEl = document.getElementById('observationPeriods'), learningsEl = document.getElementById('learnings'), reflectionsEl = document.getElementById('reflections'), rowCountEl = document.getElementById('rowCount'), colCountEl = document.getElementById('colCount'), groupNameEl = document.getElementById('groupName'), newRoleNameEl = document.getElementById('newRoleName'), customRolesContainerEl = document.getElementById('customRoles'), seatingContainerEl = document.getElementById('seatingContainer'), teacherSeatEl = document.getElementById('teacherSeat'), displayGroupNameEl = document.getElementById('displayGroupName'), studentInfoEditSectionEl = document.getElementById('studentInfoEdit'), selectedStudentCountDisplayEl = document.getElementById('selectedStudentCountDisplay'), studentEditFormContainerEl = document.getElementById('studentEditFormContainer'), currentSelectionDisplayEl = document.getElementById('currentSelectionDisplay'), observationTimeEl = document.getElementById('observationTime'), observationContentEl = document.getElementById('observationContent'), selectedObservationTypeHiddenEl = document.getElementById('selectedObservationType'), observationTypeButtonsContainerEl = document.getElementById('observationTypeButtons'), fourLearningModeButtonsContainerEl = document.getElementById('fourLearningModeButtons'), localObservationsPreviewTableEl = document.getElementById('localObservationsPreviewTable'), noLocalObservationsEl = document.getElementById('noLocalObservations'), addObservationButtonEl = document.getElementById('addObservationBtn'), importSingleTxtFileEl = document.getElementById('importSingleTxtFile'), editModalEl = document.getElementById('editObservationModal'), editObsTimeEl = document.getElementById('editObsTime'), editObsTypeEl = document.getElementById('editObsType'), editObsContentEl = document.getElementById('editObsContent'), editingObsTargetIdEl = document.getElementById('editingObsTargetId'), generalObsInfoModalEl = document.getElementById('generalObsInfoModal'), generalObsInfoBtnEl = document.getElementById('generalObsInfoBtn'), closeGeneralObsInfoModalBtnEl = document.getElementById('closeGeneralObsInfoModal'), geminiApiKeyEl = document.getElementById('geminiApiKey'), analyzeSingleBtn = document.getElementById('analyzeSingleBtn'), analyzeAggregatedBtn = document.getElementById('analyzeAggregatedBtn'), aiAnalysisModalEl = document.getElementById('aiAnalysisModal'), aiModalTitleEl = document.getElementById('aiModalTitle'), aiModalContentEl = document.getElementById('aiModalContent'), closeAiModalBtn = document.getElementById('closeAiModal'), copyAiResultBtn = document.getElementById('copyAiResultBtn'), mainAggregatedTeacherNameEl = document.getElementById('mainAggregatedTeacherName'), importMultipleTxtFilesForAggregationEl = document.getElementById('importMultipleTxtFilesForAggregation'), triggerSelectMultipleTxtBtnEl = document.getElementById('triggerSelectMultipleTxtBtn'), stagedFilesListEl = document.getElementById('stagedFilesList'), noStagedFilesMsgEl = document.getElementById('noStagedFilesMsg'), stagedFileCountEl = document.getElementById('stagedFileCount'), startAggregationTxtBtnEl = document.getElementById('startAggregationTxtBtn'), startAggregationDocBtnEl = document.getElementById('startAggregationDocBtn'), aggregationProcessStatusEl = document.getElementById('aggregationProcessStatus'), getApiKeyBtn = document.getElementById('getApiKeyBtn'), apiKeyInfoModalEl = document.getElementById('apiKeyInfoModal'), closeApiKeyModalBtn = document.getElementById('closeApiKeyModal');
+
+            initializeAllDataAndUI(); 
+
+            // --- Event Listeners ---
+            document.getElementById('updateSeating').addEventListener('click', updateSeatingHandler);
+            document.getElementById('addCustomRole').addEventListener('click', addCustomRoleHandler);
+            document.getElementById('updateStudentInfo').addEventListener('click', updateStudentInfoHandler);
+            addObservationButtonEl.addEventListener('click', addObservationForSelectedRolesHandler); 
+            document.getElementById('exportDataToTxt').addEventListener('click', exportDataToTxtHandler);
+            document.getElementById('exportDataToDoc').addEventListener('click', exportDataToDocHandler); 
+            document.getElementById('selectAllStudentsBtn').addEventListener('click', selectAllStudents);
+            document.getElementById('deselectAllTargetsBtn').addEventListener('click', deselectAllTargets); 
+            document.getElementById('clearResetData').addEventListener('click', clearAndResetAllData);
+            document.getElementById('importTxtBtn').addEventListener('click', () => importSingleTxtFileEl.click());
+            importSingleTxtFileEl.addEventListener('change', processSingleTxtImport);
+            observationPeriodsContainerEl.addEventListener('click', function(e) { if (e.target.classList.contains('period-btn')) { e.target.classList.toggle('selected'); } });
+            teacherSeatEl.addEventListener('click', handleTargetSelection);
+            document.getElementById('closeEditModal').onclick = () => editModalEl.style.display = "none";
+            document.getElementById('saveEditedObservation').onclick = saveEditedObservationHandler;
+            generalObsInfoBtnEl.onclick = () => generalObsInfoModalEl.style.display = "block";
+            closeGeneralObsInfoModalBtnEl.onclick = () => generalObsInfoModalEl.style.display = "none";
+            closeAiModalBtn.onclick = () => aiAnalysisModalEl.style.display = "none";
+            copyAiResultBtn.addEventListener('click', handleCopyAiResult);
+            getApiKeyBtn.onclick = () => apiKeyInfoModalEl.style.display = 'block';
+            closeApiKeyModalBtn.onclick = () => apiKeyInfoModalEl.style.display = 'none';
+            window.onclick = function(event) { 
+                if (event.target == editModalEl) editModalEl.style.display = "none"; 
+                if (event.target == generalObsInfoModalEl) generalObsInfoModalEl.style.display = "none";
+                if (event.target == aiAnalysisModalEl) aiAnalysisModalEl.style.display = "none";
+                if (event.target == apiKeyInfoModalEl) apiKeyInfoModalEl.style.display = "none";
+            }
+            analyzeSingleBtn.addEventListener('click', handleSingleAnalysis);
+            analyzeAggregatedBtn.addEventListener('click', handleAggregateAnalysis);
+            triggerSelectMultipleTxtBtnEl.addEventListener('click', () => importMultipleTxtFilesForAggregationEl.click());
+            importMultipleTxtFilesForAggregationEl.addEventListener('change', handleFileSelectionForAggregation);
+            startAggregationTxtBtnEl.addEventListener('click', () => handleFullAggregationAndExport('txt')); 
+            startAggregationDocBtnEl.addEventListener('click', () => handleFullAggregationAndExport('doc')); 
+
+            // --- Utility Functions ---
+            function escapeXml(unsafe) { return unsafe === null || typeof unsafe === 'undefined' ? '' : String(unsafe).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]); }
+            function getCurrentTime(withSeconds = true) {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                if (withSeconds) {
+                    const seconds = String(now.getSeconds()).padStart(2, '0');
+                    return `${hours}:${minutes}:${seconds}`;
+                }
+                return `${hours}:${minutes}`;
+            }
+            function updateLiveTime() { if (document.activeElement !== observationTimeEl && editModalEl.style.display !== 'block' && generalObsInfoModalEl.style.display !== 'block') { if (observationTimeEl) observationTimeEl.value = getCurrentTime(true); } }
+            setInterval(updateLiveTime, 1000); 
+            function logAction(detail) { console.log("User Action: ", detail); }
+
+            // --- Core Application Logic ---
+            function initializeAllDataAndUI() {
+                students = {}; localObservations = {}; localObservations[TEACHER_TARGET_ID] = []; customRoles = []; selectedTargetIds = [];
+                selectedObservationTypeFullString = ""; obsIdCounter = 0; rowCount = DEFAULT_ROW_COUNT; colCount = DEFAULT_COL_COUNT; groupName = "";
+                courseNameEl.value = ''; teacherEl.value = ''; observationClassEl.value = ''; observerNameEl.value = ''; observationDateEl.value = new Date().toISOString().split('T')[0];
+                observationPeriodsContainerEl.querySelectorAll('.period-btn.selected').forEach(btn => btn.classList.remove('selected'));
+                learningsEl.value = ''; reflectionsEl.value = ''; rowCountEl.value = rowCount; colCountEl.value = colCount; groupNameEl.value = groupName;
+                newRoleNameEl.value = ''; observationContentEl.value = ''; selectedObservationTypeHiddenEl.value = "";
+                observationTypeButtonsContainerEl.querySelectorAll('.selected').forEach(b => b.classList.remove('selected'));
+                fourLearningModeButtonsContainerEl.querySelectorAll('.selected').forEach(b => b.classList.remove('selected'));
+                updateLiveTime(); initializeSeating(); populateGeneralObservationTypeButtons(); populateFourLearningModeButtons();
+                populateEditObsTypeDropdown(); updateCustomRolesListDisplay(); updateSelectionDisplayAndControls(); updateLocalObservationsPreview();
+                displayGroupNameEl.textContent = '未命名小組'; teacherSeatEl.classList.remove('selected-seat'); logAction("應用程式已初始化/重設。");
+                stagedFilesForAggregation = []; renderStagedFilesList(); mainAggregatedTeacherNameEl.value = '';
+                aggregationProcessStatusEl.textContent = ''; importMultipleTxtFilesForAggregationEl.value = ''; 
+            }
+
+            function clearAndResetAllData() { if (confirm("警告：這將清除所有目前輸入的單筆記錄資料並且無法復原。確定要繼續嗎？ (此操作不影響已選擇用於整合的檔案)")) { initializeAllDataAndUI(); alert("所有單筆記錄資料已清除並重設。"); logAction("單筆記錄資料已清除重設。"); } }
+
+            function initializeSeating() {
+                seatingContainerEl.innerHTML = ''; 
+                const totalSeats = rowCount * colCount;
+
+                // --- FIX START ---
+                // 修正錯誤：原本的程式碼會無條件刪除所有學生觀察記錄。
+                // 新的邏輯只會精準地移除那些因座位表縮小而不再存在的學生的資料。
+                // 這樣在匯入資料後重建座位表時，就不會誤刪已載入的觀察記錄。
+                const allCurrentStudentIds = Object.keys(students);
+                allCurrentStudentIds.forEach(studentId => {
+                    if (parseInt(studentId) > totalSeats) {
+                        delete students[studentId]; // 刪除學生資料
+                        if (localObservations[studentId]) {
+                            delete localObservations[studentId]; // 刪除該學生的觀察記錄
+                        }
+                    }
+                });
+                // --- FIX END ---
+
+                const grid = document.createElement('div');
+                grid.className = `grid gap-3`;
+                grid.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+
+                if (!localObservations[TEACHER_TARGET_ID]) {
+                    localObservations[TEACHER_TARGET_ID] = [];
+                }
+
+                for (let i = 1; i <= totalSeats; i++) { 
+                    const seatId = String(i); 
+                    if (!students[seatId]) { 
+                        students[seatId] = { name: `學生${seatId}`, role: 'none' };
+                    }
+                    if (!localObservations[seatId]) {
+                        localObservations[seatId] = [];
+                    }
+                    const seat = document.createElement('div');
+                    seat.className = 'student-seat p-3 rounded-lg text-center relative'; 
+                    seat.dataset.id = seatId;
+                    seat.innerHTML = `<div class="font-medium text-sm">座位${seatId}</div><div class="text-xs text-slate-700 truncate" id="student-name-${seatId}">${students[seatId].name}</div>`;
+                    grid.appendChild(seat);
+                    seat.addEventListener('click', handleTargetSelection);
+                    updateSeatRoleBadge(seatId, students[seatId].role);
+                }
+
+                seatingContainerEl.appendChild(grid); 
+                
+                const newSelectedTargetIds = selectedTargetIds.filter(id => id === TEACHER_TARGET_ID || students[id]);
+                if (newSelectedTargetIds.length !== selectedTargetIds.length) {
+                    selectedTargetIds = newSelectedTargetIds;
+                    document.querySelectorAll('.student-seat.selected-seat, #teacherSeat.selected-seat').forEach(s => {
+                        if (!selectedTargetIds.includes(s.dataset.id)) {
+                            s.classList.remove('selected-seat');
+                        }
+                    });
+                }
+                
+                updateSelectionDisplayAndControls(); 
+                updateLocalObservationsPreview();
+            }
+
+            function updateSeatingHandler() {
+                const newRowCount = parseInt(rowCountEl.value) || DEFAULT_ROW_COUNT, newColCount = parseInt(colCountEl.value) || DEFAULT_COL_COUNT, newGroupName = groupNameEl.value.trim();
+                if (newRowCount < 1 || newRowCount > 5 || newColCount < 1 || newColCount > 5) { alert('列數和行數必須在 1 到 5 之間'); rowCountEl.value = rowCount; colCountEl.value = colCount; return; }
+                rowCount = newRowCount; colCount = newColCount; groupName = newGroupName;
+                displayGroupNameEl.textContent = groupName || '未命名小組';
+                initializeSeating(); 
+                logAction(`座位表已更新: ${rowCount}列 x ${colCount}行, 小組名稱: ${groupName || '未命名'}`);
+            }
+
+            function handleObservationTypeSelection() { 
+                const clickedButton = this, type = clickedButton.dataset.fullType, wasSelected = clickedButton.classList.contains('selected');
+                observationTypeButtonsContainerEl.querySelectorAll('.action-btn.selected').forEach(b => b.classList.remove('selected'));
+                fourLearningModeButtonsContainerEl.querySelectorAll('.action-btn.selected').forEach(b => b.classList.remove('selected'));
+                if (!wasSelected) { clickedButton.classList.add('selected'); selectedObservationTypeFullString = type; } 
+                else { selectedObservationTypeFullString = ""; }
+                selectedObservationTypeHiddenEl.value = selectedObservationTypeFullString;
+            }
+
+            function populateGeneralObservationTypeButtons() {
+                observationTypeButtonsContainerEl.innerHTML = '';
+                generalObservationTypes.forEach(obsTypeObj => {
+                    const button = document.createElement('button');
+                    button.className = 'action-btn type-btn'; button.dataset.fullType = obsTypeObj.fullType; button.textContent = obsTypeObj.displayShort; 
+                    button.addEventListener('click', handleObservationTypeSelection);
+                    observationTypeButtonsContainerEl.appendChild(button);
+                });
+            }
+            
+            function populateFourLearningModeButtons() {
+                fourLearningModeButtonsContainerEl.innerHTML = '';
+                fourLearningModeTypes.forEach(modeTypeObj => {
+                    const button = document.createElement('button');
+                    button.className = 'action-btn mode-btn'; button.dataset.fullType = modeTypeObj.fullType; button.textContent = modeTypeObj.displayShort; 
+                    button.addEventListener('click', handleObservationTypeSelection);
+                    fourLearningModeButtonsContainerEl.appendChild(button);
+                });
+            }
+
+            function addObservationForSelectedRolesHandler() {
+                if (selectedTargetIds.length === 0) { alert('請先選取觀察角色 (學生或授課教師)。'); return; }
+                let obsTypeToRecord = selectedObservationTypeFullString;
+                if (!obsTypeToRecord) { if (confirm("未選擇觀察項目。是否將此記錄歸類為「其他觀察」？")) { obsTypeToRecord = OTHER_OBSERVATION_TYPE.fullType; } else { alert("請選擇一個觀察項目後再新增記錄。"); return; } }
+                const time = observationTimeEl.value || getCurrentTime(), content = observationContentEl.value.trim(), timestamp = new Date().getTime();
+                obsIdCounter++;
+                const newObsIdBase = `obs-${timestamp}-${obsIdCounter}`;
+                let count = 0;
+                selectedTargetIds.forEach((targetId, index) => {
+                    const obsId = `${newObsIdBase}-${index}`;
+                    if (!localObservations[targetId]) localObservations[targetId] = [];
+                    localObservations[targetId].push({ obsId, time, type: obsTypeToRecord, content, timestamp });
+                    count++;
+                });
+                observationContentEl.value = ''; 
+                observationTypeButtonsContainerEl.querySelectorAll('.selected').forEach(b => b.classList.remove('selected'));
+                fourLearningModeButtonsContainerEl.querySelectorAll('.selected').forEach(b => b.classList.remove('selected'));
+                selectedObservationTypeFullString = ""; selectedObservationTypeHiddenEl.value = ""; 
+                updateLocalObservationsPreview();
+                const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obsTypeToRecord);
+                const friendlyName = obsTypeObj ? obsTypeObj.displayShort : obsTypeToRecord.split(":")[0]; 
+                alert(`已為 ${count} 位選取角色新增 "${friendlyName}" 觀察記錄。`);
+                logAction(`新增觀察: ${obsTypeToRecord}, 內容: "${content}", 角色: ${selectedTargetIds.join(',')}`);
+            }
+
+            function populateEditObsTypeDropdown() {
+                editObsTypeEl.innerHTML = '';
+                ALL_OBSERVATION_TYPES.forEach(obsTypeObj => {
+                    const option = document.createElement('option');
+                    option.value = obsTypeObj.fullType; option.textContent = obsTypeObj.displayShort; 
+                    editObsTypeEl.appendChild(option);
+                });
+            }
+
+            function handleTargetSelection() { 
+                const targetId = this.dataset.id;
+                this.classList.toggle('selected-seat');
+                const index = selectedTargetIds.indexOf(targetId);
+                if (index > -1) { selectedTargetIds.splice(index, 1); } else { selectedTargetIds.push(targetId); }
+                selectedTargetIds.sort((a, b) => a === TEACHER_TARGET_ID ? -1 : b === TEACHER_TARGET_ID ? 1 : parseInt(a) - parseInt(b));
+                updateSelectionDisplayAndControls();
+            }
+
+            function updateSelectionDisplayAndControls() {
+                studentEditFormContainerEl.innerHTML = ''; 
+                const selectedStudentsOnly = selectedTargetIds.filter(id => id !== TEACHER_TARGET_ID && students[id]);
+                selectedStudentCountDisplayEl.textContent = selectedStudentsOnly.length;
+                if (selectedTargetIds.length === 0) {
+                    currentSelectionDisplayEl.textContent = '未選擇角色'; studentInfoEditSectionEl.classList.add('hidden'); addObservationButtonEl.disabled = true;
+                } else {
+                    let selectionText = "已選取 ", hasTeacher = selectedTargetIds.includes(TEACHER_TARGET_ID);
+                    if (hasTeacher) selectionText += "授課教師";
+                    if (selectedStudentsOnly.length > 0) {
+                        if (hasTeacher) selectionText += " 及 ";
+                        selectionText += `${selectedStudentsOnly.length} 位學生`;
+                    }
+                    currentSelectionDisplayEl.textContent = selectionText;
+                    if (selectedStudentsOnly.length > 0) {
+                        studentInfoEditSectionEl.classList.remove('hidden');
+                        selectedStudentsOnly.forEach(studentId => {
+                             if (students[studentId]) {
+                                const studentBlock = document.createElement('div');
+                                studentBlock.className = 'student-edit-block'; studentBlock.dataset.studentId = studentId;
+                                studentBlock.innerHTML = `<label>座位 ${studentId} - 學生姓名</label><input type="text" id="editStudentName-${studentId}" value="${escapeXml(students[studentId].name)}"><label class="mt-2 mb-1">座位 ${studentId} - 學生角色</label><div class="flex flex-wrap gap-1" id="studentRoleButtons-${studentId}"></div>`;
+                                studentEditFormContainerEl.appendChild(studentBlock);
+                                populateRoleButtonsForStudent(studentId, studentBlock.querySelector(`#studentRoleButtons-${studentId}`), students[studentId].role);
+                            }
+                        });
+                    } else { studentInfoEditSectionEl.classList.add('hidden'); }
+                    addObservationButtonEl.disabled = false;
+                }
+            }
+            
+            function populateRoleButtonsForStudent(studentId, container, currentRoleId) {
+                container.innerHTML = '';
+                 const allRoles = [{ id: 'none', name: '無角色' }, { id: 'facilitator', name: '促進者' }, { id: 'supporter', name: '支持者' }, { id: 'expresser', name: '表達者' }, { id: 'reflector', name: '反思者' }, ...customRoles];
+                allRoles.forEach(role => {
+                    const button = document.createElement('button');
+                    button.type = 'button'; button.className = 'student-edit-role-btn'; button.textContent = role.name; button.dataset.roleId = role.id;
+                    if (role.id === currentRoleId) button.classList.add('selected');
+                    button.addEventListener('click', function() { container.querySelectorAll('.student-edit-role-btn.selected').forEach(b => b.classList.remove('selected')); this.classList.add('selected'); });
+                    container.appendChild(button);
+                });
+            }
+
+            function addCustomRoleHandler() {
+                const roleName = newRoleNameEl.value.trim();
+                if (roleName === '') { alert('請輸入角色名稱'); return; }
+                const isDefaultRoleName = ['無角色', '促進者', '支持者', '表達者', '反思者'].includes(roleName), isExistingCustomRoleName = customRoles.some(role => role.name === roleName);
+                if (isDefaultRoleName || isExistingCustomRoleName) { alert('此角色名稱已存在或為預設角色名稱。'); return; }
+                const colors = ['amber', 'emerald', 'teal', 'cyan', 'pink', 'rose', 'fuchsia', 'violet', 'indigo', 'sky'];
+                const usedColors = customRoles.map(r => r.color);
+                const availableColors = colors.filter(c => !usedColors.includes(c));
+                const randomColor = availableColors.length > 0 ? availableColors[Math.floor(Math.random() * availableColors.length)] : colors[customRoles.length % colors.length];
+                const newRole = { id: 'custom-' + Date.now(), name: roleName, color: randomColor };
+                customRoles.push(newRole);
+                updateCustomRolesListDisplay(); updateSelectionDisplayAndControls(); newRoleNameEl.value = '';
+                logAction(`新增自定義角色: ${roleName}`);
+            }
+
+            function updateCustomRolesListDisplay() {
+                customRolesContainerEl.innerHTML = '';
+                customRoles.forEach(role => {
+                    const roleDiv = document.createElement('div');
+                    roleDiv.className = 'flex items-center justify-between text-sm';
+                    roleDiv.innerHTML = `<div class="flex items-center"><div class="w-3 h-3 rounded-full bg-${role.color}-500 mr-2"></div><span>${role.name}</span></div><button class="text-red-500 hover:text-red-700" data-role-id="${role.id}"><i class="fas fa-times"></i></button>`;
+                    roleDiv.querySelector('button').addEventListener('click', function() { deleteCustomRole(this.dataset.roleId); });
+                    customRolesContainerEl.appendChild(roleDiv);
+                });
+            }
+
+            function deleteCustomRole(roleId) {
+                const roleToDelete = customRoles.find(r => r.id === roleId);
+                if (!roleToDelete) return;
+                customRoles = customRoles.filter(role => role.id !== roleId);
+                Object.keys(students).forEach(sId => { if (students[sId] && students[sId].role === roleId) { students[sId].role = 'none'; updateSeatRoleBadge(sId, 'none'); } });
+                updateCustomRolesListDisplay(); updateSelectionDisplayAndControls(); 
+                logAction(`刪除自定義角色: ${roleToDelete.name} (ID: ${roleId})`);
+            }
+            
+            function updateStudentInfoHandler() {
+                const selectedStudentsOnly = selectedTargetIds.filter(id => id !== TEACHER_TARGET_ID && students[id]);
+                if (selectedStudentsOnly.length === 0) { alert('請先選取學生。'); return; }
+                let updatedCount = 0, updatedDetailsLog = [];
+                selectedStudentsOnly.forEach(studentId => {
+                    const nameInput = document.getElementById(`editStudentName-${studentId}`), roleButtonContainer = document.getElementById(`studentRoleButtons-${studentId}`);
+                    if (nameInput && roleButtonContainer && students[studentId]) {
+                        const oldName = students[studentId].name, oldRole = students[studentId].role;
+                        students[studentId].name = nameInput.value.trim() || `學生${studentId}`;
+                        const selectedRoleButton = roleButtonContainer.querySelector('.student-edit-role-btn.selected');
+                        if (selectedRoleButton) students[studentId].role = selectedRoleButton.dataset.roleId;
+                        if (oldName !== students[studentId].name || oldRole !== students[studentId].role) { updatedDetailsLog.push(`座位${studentId}: ${oldName}->${students[studentId].name}, 角色:${getRoleDisplayText(oldRole)}->${getRoleDisplayText(students[studentId].role)}`); }
+                        document.getElementById(`student-name-${studentId}`).textContent = students[studentId].name;
+                        updateSeatRoleBadge(studentId, students[studentId].role);
+                        updatedCount++;
+                    }
+                });
+                if (updatedCount > 0) { alert(`已更新 ${updatedCount} 位選取學生的資訊。`); logAction(`更新 ${updatedCount} 位學生資訊: ${updatedDetailsLog.join('; ')}`); }
+            }
+
+            function updateSeatRoleBadge(studentId, roleId) {
+                const seat = seatingContainerEl.querySelector(`.student-seat[data-id="${studentId}"]`);
+                if (!seat) return;
+                const existingBadge = seat.querySelector('.role-badge');
+                if (existingBadge) existingBadge.remove();
+                if (roleId && roleId !== 'none') {
+                    const roleBadge = document.createElement('div');
+                    roleBadge.className = `role-badge text-white ${getRoleBadgeClass(roleId)}`;
+                    roleBadge.textContent = getRoleDisplayText(roleId);
+                    seat.appendChild(roleBadge);
+                }
+            }
+
+            function getRoleBadgeClass(roleId) {
+                switch (roleId) { case 'facilitator': return 'bg-red-500'; case 'supporter': return 'bg-blue-500'; case 'expresser': return 'bg-green-500'; case 'reflector': return 'bg-purple-500'; }
+                const custom = customRoles.find(r => r.id === roleId);
+                return custom ? `bg-${custom.color}-500` : 'bg-gray-400';
+            }
+
+            function updateLocalObservationsPreview() {
+                const thead = localObservationsPreviewTableEl.querySelector('thead'), tbody = localObservationsPreviewTableEl.querySelector('tbody');
+                thead.innerHTML = ''; tbody.innerHTML = '';
+                const allObsArray = [];
+                if (localObservations[TEACHER_TARGET_ID] && Array.isArray(localObservations[TEACHER_TARGET_ID])) { localObservations[TEACHER_TARGET_ID].forEach(obs => { allObsArray.push({ ...obs, targetId: TEACHER_TARGET_ID, targetName: '授課教師' }); }); }
+                Object.keys(localObservations).forEach(targetId => { if (targetId !== TEACHER_TARGET_ID && students[targetId] && Array.isArray(localObservations[targetId])) { localObservations[targetId].forEach(obs => { allObsArray.push({ ...obs, targetId, targetName: students[targetId].name }); }); } });
+                if (allObsArray.length === 0) { localObservationsPreviewTableEl.style.display = 'none'; noLocalObservationsEl.style.display = 'block'; return; }
+                localObservationsPreviewTableEl.style.display = 'table'; noLocalObservationsEl.style.display = 'none';
+                const uniqueTimes = [...new Set(allObsArray.map(obs => obs.time))].sort(), targetIdsWithObs = [...new Set(allObsArray.map(obs => obs.targetId))].sort((a,b) => a === TEACHER_TARGET_ID ? -1 : b === TEACHER_TARGET_ID ? 1 : parseInt(a) - parseInt(b));
+                const headerRow = thead.insertRow();
+                headerRow.insertCell().textContent = '時間';
+                targetIdsWithObs.forEach(tId => { const th = headerRow.insertCell(); th.textContent = tId === TEACHER_TARGET_ID ? '授課教師' : `座位${tId}-${students[tId]?.name || '未知'}`; th.style.minWidth = "120px"; });
+                uniqueTimes.forEach(time => {
+                    const row = tbody.insertRow(); row.insertCell().textContent = time;
+                    targetIdsWithObs.forEach(tId => {
+                        const cell = row.insertCell();
+                        allObsArray.filter(obs => obs.targetId === tId && obs.time === time).forEach(obs => {
+                            const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obs.type);
+                            const isFourLearningMode = obsTypeObj && FOUR_LEARNING_MODES_CODES.includes(obsTypeObj.code), isOther = obsTypeObj && obsTypeObj.code === OTHER_OBSERVATION_TYPE.code;
+                            let textColorClass = isFourLearningMode ? 'obs-item-text-four-learn' : (isOther ? 'obs-item-text-other' : 'obs-item-text-general');
+                            const displayTypeString = obsTypeObj ? obsTypeObj.displayShort : obs.type.split(":")[0]; 
+                            const div = document.createElement('div');
+                            div.className = 'obs-item text-xs';
+                            div.innerHTML = `<span class="${textColorClass}">${displayTypeString}: ${escapeXml(obs.content)}</span><span class="obs-actions"><button data-obs-id="${obs.obsId}" data-target-id="${tId}" class="edit-obs-btn text-gray-500 hover:text-gray-700" title="編輯"><i class="fas fa-edit"></i></button><button data-obs-id="${obs.obsId}" data-target-id="${tId}" class="delete-obs-btn text-gray-500 hover:text-gray-700" title="刪除"><i class="fas fa-trash-alt"></i></button></span>`;
+                            cell.appendChild(div);
+                        });
+                    });
+                });
+                tbody.querySelectorAll('.edit-obs-btn').forEach(btn => btn.addEventListener('click', (e) => openEditObservationModal(e.currentTarget.dataset.obsId, e.currentTarget.dataset.targetId)));
+                tbody.querySelectorAll('.delete-obs-btn').forEach(btn => btn.addEventListener('click', (e) => deleteObservation(e.currentTarget.dataset.obsId, e.currentTarget.dataset.targetId)));
+            }
+            
+            function openEditObservationModal(obsIdToEdit, targetIdOfObs) {
+                const observationToEdit = localObservations[targetIdOfObs]?.find(obs => obs.obsId === obsIdToEdit);
+                if (!observationToEdit) { alert('找不到要編輯的觀察記錄。'); return; }
+                document.getElementById('editingObsId').value = obsIdToEdit; editingObsTargetIdEl.value = targetIdOfObs; 
+                editObsTimeEl.value = observationToEdit.time; editObsTypeEl.value = observationToEdit.type; editObsContentEl.value = observationToEdit.content;
+                editModalEl.style.display = 'block';
+            }
+
+            function saveEditedObservationHandler() {
+                const obsId = document.getElementById('editingObsId').value, targetId = editingObsTargetIdEl.value;
+                const newTime = editObsTimeEl.value, newType = editObsTypeEl.value, newContent = editObsContentEl.value.trim();
+                if (!newTime || !newType) { alert('時間和觀察類型為必填項。'); return; }
+                const obsIndex = localObservations[targetId]?.findIndex(obs => obs.obsId === obsId);
+                if (obsIndex !== -1) {
+                    const oldObs = {...localObservations[targetId][obsIndex]}; 
+                    localObservations[targetId][obsIndex] = { ...oldObs, time: newTime, type: newType, content: newContent };
+                    editModalEl.style.display = 'none'; updateLocalObservationsPreview(); alert('觀察記錄已更新。');
+                    logAction(`編輯觀察記錄: ID ${obsId} (角色 ${targetId}), 舊: ${oldObs.type}:${oldObs.content}, 新: ${newType}:${newContent}`);
+                } else { alert('更新失敗，找不到原始觀察記錄。'); }
+            }
+
+            function deleteObservation(obsId, targetId) {
+                if (!confirm('確定要刪除此觀察記錄嗎？')) return;
+                const obsIndex = localObservations[targetId]?.findIndex(obs => obs.obsId === obsId);
+                if (obsIndex !== -1) {
+                    const deletedObs = localObservations[targetId].splice(obsIndex, 1)[0];
+                    updateLocalObservationsPreview(); alert('觀察記錄已刪除。');
+                    logAction(`刪除觀察記錄: ID ${obsId} (角色 ${targetId}), 類型: ${deletedObs.type}, 內容: "${deletedObs.content}"`);
+                } else { alert('刪除失敗，找不到觀察記錄。'); }
+            }
+
+            function selectAllStudents() {
+                seatingContainerEl.querySelectorAll('.student-seat').forEach(seat => { seat.classList.add('selected-seat'); if (!selectedTargetIds.includes(seat.dataset.id)) selectedTargetIds.push(seat.dataset.id); });
+                if (selectedTargetIds.includes(TEACHER_TARGET_ID)) { selectedTargetIds = selectedTargetIds.filter(id => id !== TEACHER_TARGET_ID); teacherSeatEl.classList.remove('selected-seat'); }
+                selectedTargetIds.sort((a, b) => parseInt(a) - parseInt(b)); 
+                updateSelectionDisplayAndControls(); logAction("全選所有學生。");
+            }
+
+            function deselectAllTargets() {
+                seatingContainerEl.querySelectorAll('.student-seat.selected-seat').forEach(seat => seat.classList.remove('selected-seat'));
+                teacherSeatEl.classList.remove('selected-seat');
+                selectedTargetIds = [];
+                updateSelectionDisplayAndControls(); logAction("取消全選所有角色。");
+            }
+            
+            function getRoleDisplayText(roleId, forComparison = false) {
+                const defaultRolesMap = { 'none': '無角色', 'facilitator': '促進者', 'supporter': '支持者', 'expresser': '表達者', 'reflector': '反思者' };
+                if (defaultRolesMap[roleId]) return defaultRolesMap[roleId];
+                const custom = customRoles.find(r => r.id === roleId); 
+                if (custom) return custom.name;
+                if (forComparison) { 
+                    const defaultRoleNameValues = Object.values(defaultRolesMap);
+                    if (defaultRoleNameValues.includes(roleId)) return roleId;
+                }
+                return (roleId || '未知角色');
+            }
+
+            function getBasicObservationData() { 
+                return { courseName: courseNameEl.value.trim() || '未命名課程', teacher: teacherEl.value.trim() || '未填寫教師', obsClass: observationClassEl.value.trim() || '未填寫班級', observer: observerNameEl.value.trim() || '未填寫觀課員', obsDate: observationDateEl.value || new Date().toISOString().split('T')[0], groupN: groupNameEl.value.trim() || '未設定小組', periodsText: Array.from(observationPeriodsContainerEl.querySelectorAll('.period-btn.selected')).map(b=>b.dataset.period).join(',')||'未選擇', learnings: learningsEl.value.trim(), reflections: reflectionsEl.value.trim() };
+            }
+
+            function generateFilenameForSingle(data) {
+                const teacher = data.teacher !== '未填寫教師' ? data.teacher : "教師未填", obsClass = data.obsClass !== '未填寫班級' ? data.obsClass : "班級未填", observer = data.observer !== '未填寫觀課員' ? data.observer : "觀課員未填", datePart = data.obsDate || new Date().toISOString().split('T')[0];
+                return `[觀課記錄]${teacher}_${obsClass}_${observer}_${datePart}`;
+            }
+            
+            function generateFilenameForFullAggregation(mainTeacherName, aggregationDateStr) {
+                const teacherPart = mainTeacherName || "未知教師", datePart = aggregationDateStr || new Date().toISOString().split('T')[0];
+                return `[整合觀課記錄]${teacherPart}_${datePart}`;
+            }
+            
+            // --- AI Analysis Logic ---
+            function getActiveApiKey() {
+                const userApiKey = geminiApiKeyEl.value.trim();
+                return userApiKey || DEFAULT_BACKUP_API_KEY;
+            }
+
+            function handleCopyAiResult() {
+                const textToCopy = aiAnalysisModalEl.dataset.rawText;
+                if (textToCopy) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalHtml = copyAiResultBtn.innerHTML;
+                        copyAiResultBtn.innerHTML = '<i class="fas fa-check fa-icon-spacing"></i>已複製!';
+                        copyAiResultBtn.classList.add('bg-green-200');
+                        setTimeout(() => {
+                            copyAiResultBtn.innerHTML = originalHtml;
+                            copyAiResultBtn.classList.remove('bg-green-200');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('無法複製文字: ', err);
+                        alert('複製失敗，您的瀏覽器可能不支援或未授權，請手動複製。');
+                    });
+                } else {
+                    alert('沒有可複製的內容。');
+                }
+            }
+            
+            async function callGeminiAPI(prompt, apiKey) {
+                const modelsToTry = ['gemini-1.5-flash-latest', 'gemini-1.0-pro'];
+                const maxRetries = 2, retryDelay = 2000;
+                for (const model of modelsToTry) {
+                    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                        const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                        try {
+                            console.log(`Attempt ${attempt} with model ${model}...`);
+                            const response = await fetch(API_ENDPOINT, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    "contents": [{ "parts": [{ "text": prompt }] }],
+                                    "generationConfig": { "temperature": 0.5, "topK": 1, "topP": 1, "maxOutputTokens": 4096 },
+                                    "safetySettings": [ {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"}, {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"} ]
+                                })
+                            });
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts) {
+                                    console.log(`Success with model ${model}!`);
+                                    return data.candidates[0].content.parts[0].text;
+                                } else {
+                                    const finishReason = data.candidates?.[0]?.finishReason;
+                                    console.warn(`API returned no content with model ${model}. Finish Reason:`, finishReason);
+                                    if (finishReason === 'SAFETY') break;
+                                }
+                            } else if (response.status === 503 || response.status === 429) {
+                                console.warn(`Model ${model} is overloaded (status ${response.status}). Retrying in ${retryDelay / 1000}s...`);
+                                if (attempt < maxRetries) { await new Promise(resolve => setTimeout(resolve, retryDelay)); continue; }
+                            } else {
+                                const errorData = await response.json();
+                                console.error(`API Error with model ${model}:`, errorData);
+                                break;
+                            }
+                        } catch (error) {
+                            console.error(`Network or fetch error during attempt ${attempt} for model ${model}:`, error);
+                            if (attempt < maxRetries) await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        }
+                    }
+                }
+                throw new Error('所有模型嘗試均失敗。請檢查您的網路連線，或稍後再試。伺服器可能持續忙碌中。');
+            }
+            
+            function prepareDataForAISingle() {
+                const data = getBasicObservationData();
+                let text = `# 觀課記錄資料\n\n## 1. 基本資訊\n- 課程名稱: ${data.courseName}\n- 授課教師: ${data.teacher}\n- 觀課班級: ${data.obsClass}\n- 觀課人員: ${data.observer}\n- 日期與節次: ${data.obsDate} 第 ${data.periodsText} 節\n- 觀察小組: ${data.groupN}\n\n## 2. 學生與角色\n`;
+                const studentKeys = Object.keys(students).sort((a,b) => parseInt(a)-parseInt(b));
+                if (studentKeys.length > 0) { studentKeys.forEach(sId => { const s = students[sId]; text += `- 座位${sId} (${s.name}): ${getRoleDisplayText(s.role)}\n`; });
+                } else { text += `無學生資訊。\n`; }
+                text += `\n## 3. 觀察記錄 (時間、對象、事件)\n`;
+                const allObsArray = [];
+                Object.keys(localObservations).forEach(targetId => { (localObservations[targetId] || []).forEach(obs => { const targetName = targetId === TEACHER_TARGET_ID ? '授課教師' : `座位${targetId}-${students[targetId]?.name || '未知'}`; allObsArray.push({ ...obs, targetName }); }); });
+                if (allObsArray.length > 0) {
+                    allObsArray.sort((a, b) => a.time.localeCompare(b.time)).forEach(obs => {
+                        const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obs.type);
+                        const displayType = obsTypeObj ? obsTypeObj.displayShort : obs.type;
+                        text += `- ${obs.time}, ${obs.targetName}, 觀察到: "${displayType}"`;
+                        if (obs.content) text += `, 補充: "${obs.content}"`;
+                        text += `\n`;
+                    });
+                } else { text += `無具體觀察記錄。\n`; }
+                text += `\n## 4. 觀課者的學習與省思\n### 學到的理念與方法:\n${data.learnings || '未填寫'}\n\n### 我的省思:\n${data.reflections || '未填寫'}\n`;
+                return text;
+            }
+
+            function getAIPromptForSingle(dataText) {
+                return `你是一位專精於「學習共同體」教學法的教育專家與課堂觀察分析師。你的任務是分析以下這份使用「學習共同體公開課觀察系統」產生的課堂觀察記錄。
+請使用繁體中文，並根據提供的資料，以清晰、結構化的方式產出一份專業的分析報告。
+報告應包含以下幾個部分，並使用 Markdown 格式化：
+1.  **### 課堂總結摘要**
+    簡要總結這堂課的流程與主要活動，描述課堂的整體氛圍。
+2.  **### 觀察亮點與優勢**
+    根據「四學模式」(自學、共學、互學、導學) 和「十大策略」(串、借、寫、幫、標、礎、碼、試、令、備)，找出並稱讚授課教師與學生表現出的優良實踐。例如，教師在哪個環節有效引導？學生在哪個時刻展現了高品質的互助學習？
+3.  **### 可探討與發展之處**
+    以溫和且具建設性的角度，指出觀察記錄中可能值得教師進一步思考或調整的地方。例如，是否有某些學習模式運用較少？學生的參與度是否可以更均衡？是否有學生的需求未被滿足？
+4.  **### 具體教學建議**
+    基於前面的分析，提供 2-3 點具體、可操作的教學建議，幫助授課教師在下一次課程中能進一步深化學習共同體的實踐。建議應與觀察到的現象緊密關聯。
+請開始分析以下資料：
+---
+${dataText}
+---`;
+            }
+
+            async function handleSingleAnalysis() {
+                const apiKey = getActiveApiKey();
+                if (!apiKey) { alert('請在輸入框中提供您的 API 金鑰，或等待開發者提供備用金鑰。'); return; }
+                aiModalTitleEl.textContent = 'AI 分析本筆記錄';
+                aiModalContentEl.innerHTML = `<div class="flex flex-col items-center justify-center"><div class="spinner"></div><p class="mt-4 text-gray-600">正在準備資料並呼叫 AI 進行分析，請稍候...</p></div>`;
+                aiAnalysisModalEl.style.display = 'block';
+                try {
+                    const dataText = prepareDataForAISingle();
+                    const prompt = getAIPromptForSingle(dataText);
+                    logAction("準備好單筆資料，呼叫AI...");
+                    const result = await callGeminiAPI(prompt, apiKey);
+                    logAction("AI分析完成。");
+                    aiAnalysisModalEl.dataset.rawText = result; // Store the raw markdown
+                    aiModalContentEl.innerHTML = marked.parse(result);
+                } catch (error) {
+                    console.error("AI analysis failed:", error);
+                    aiModalContentEl.innerHTML = `<div class="text-red-600"><p class="font-bold">AI 分析失敗</p><p>錯誤訊息：${error.message}</p><p class="mt-2 text-sm">請檢查您的 API 金鑰是否正確、網路連線是否正常，或查看瀏覽器主控台(F12)獲取更多資訊。</p></div>`;
+                }
+            }
+            
+            // --- Aggregation & Related AI Logic ---
+            function handleFileSelectionForAggregation(event) {
+                const files = event.target.files; if (!files || files.length === 0) return;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (!stagedFilesForAggregation.some(sf => sf.name === file.name)) {
+                        stagedFilesForAggregation.push({ fileObject: file, fileId: `file-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, name: file.name });
+                    } else { alert(`檔案 "${file.name}" 已經在列表中了。`); }
+                }
+                renderStagedFilesList(); importMultipleTxtFilesForAggregationEl.value = ''; 
+            }
+
+            function renderStagedFilesList() {
+                stagedFilesListEl.innerHTML = '';
+                const hasFiles = stagedFilesForAggregation.length > 0;
+                noStagedFilesMsgEl.style.display = hasFiles ? 'none' : 'block';
+                if (hasFiles) {
+                    stagedFilesForAggregation.forEach(stagedFile => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'file-item'; itemDiv.dataset.fileId = stagedFile.fileId;
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = stagedFile.name; nameSpan.title = stagedFile.name;
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'delete-file-btn'; deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        deleteBtn.onclick = function() { stagedFilesForAggregation = stagedFilesForAggregation.filter(sf => sf.fileId !== stagedFile.fileId); renderStagedFilesList(); };
+                        itemDiv.appendChild(nameSpan); itemDiv.appendChild(deleteBtn);
+                        stagedFilesListEl.appendChild(itemDiv);
+                    });
+                }
+                stagedFileCountEl.textContent = stagedFilesForAggregation.length;
+                startAggregationTxtBtnEl.disabled = !hasFiles; startAggregationDocBtnEl.disabled = !hasFiles; analyzeAggregatedBtn.disabled = !hasFiles;
+            }
+            
+            function prepareDataForAIAggregate(allFilesParsedData, mainTeacherName, aggDate) {
+                let text = `# 多份觀課記錄整合資料\n\n## 1. 報告摘要\n- 主要授課教師: ${mainTeacherName}\n- 整合日期: ${aggDate}\n- 總共整合了 ${allFilesParsedData.length} 份來自不同觀課者的記錄。\n\n## 2. 各觀課者記錄摘要\n`;
+                allFilesParsedData.forEach((fileData, index) => {
+                    text += `### 記錄 ${index + 1} (來源: ${fileData.filename})\n`;
+                    text += `- 觀課員: ${fileData.basicInfo.observer}\n- 原始記錄教師: ${fileData.basicInfo.teacher}\n- 原始記錄班級/小組: ${fileData.basicInfo.obsClass} / ${fileData.basicInfo.groupN}\n`;
+                    text += `#### 該觀課員的學習與省思:\n  - **學到的理念與方法:** ${fileData.learnings || '未填寫'}\n  - **我的省思:** ${fileData.reflections || '未填寫'}\n\n`;
+                });
+                text += `## 3. 整合觀察事件\n以下是將所有記錄中的觀察事件依時間、對象合併後的結果:\n\n`;
+                const allObservations = {};
+                allFilesParsedData.forEach(fileData => {
+                    Object.keys(fileData.observations).forEach(targetId => {
+                        fileData.observations[targetId].forEach(obs => {
+                            if (!allObservations[obs.time]) allObservations[obs.time] = {};
+                            const studentInfo = fileData.students[targetId];
+                            const targetKey = targetId === TEACHER_TARGET_ID ? '授課教師' : `座位${targetId}-${studentInfo?.name || '未知'}`;
+                            if (!allObservations[obs.time][targetKey]) allObservations[obs.time][targetKey] = [];
+                            const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obs.type);
+                            const displayType = obsTypeObj ? obsTypeObj.displayShort : obs.type;
+                            allObservations[obs.time][targetKey].push(`[${fileData.basicInfo.observer}] 觀察到: "${displayType}", 補充: "${obs.content || '無'}"`);
+                        });
+                    });
+                });
+                const sortedTimes = Object.keys(allObservations).sort();
+                if (sortedTimes.length > 0) { sortedTimes.forEach(time => { text += `### 時間點: ${time}\n`; Object.keys(allObservations[time]).forEach(targetName => { text += `- **對象: ${targetName}**\n`; allObservations[time][targetName].forEach(obsText => { text += `  - ${obsText}\n`; }); }); text += `\n`; });
+                } else { text += `無可整合的具體觀察記錄。\n`; }
+                return text;
+            }
+
+            function getAIPromptForAggregate(dataText) {
+                return `你是一位頂尖的教育顧問，專長是從多個來源的課堂觀察數據中進行整合分析，並找出趨勢與共通點，尤其精通「學習共同體」教學法。
+你的任務是分析以下這份從多位觀課者記錄中整合而來的資料。
+請使用繁體中文，並根據提供的整合資料，以清晰、結構化的方式產出一份專業的整合分析報告。報告應能提供給主要授課教師作為教學反思的重要參考。
+報告應包含以下幾個部分，並使用 Markdown 格式化：
+1.  **### 綜合趨勢摘要**
+    分析所有觀課記錄，總結出這堂課的共通觀察是什麼？不同觀課者關注的焦點是否有差異？課堂的整體動態（如節奏、氣氛、學習流動）呈現出什麼樣的共同圖像？
+2.  **### 共通的亮點與優勢**
+    找出多位觀課者共同記錄到的優良實踐。這代表這些是特別突出且有效的教學行為或學生學習表現。請根據「四學模式」和「十大策略」框架來闡述。
+3.  **### 值得共同關注的議題**
+    找出多位觀課者共同記錄到、或從數據中浮現出的潛在挑戰與發展機會。這些共通議題是教學改進的關鍵切入點。例如，是否多人都觀察到某個小組互動困難？或是某個教學環節學生普遍感到困惑？
+4.  **### 給授課教師的整合性建議**
+    基於前面的綜合分析，提煉出 2-3 點最核心、最具影響力的教學建議。這些建議應該是基於多方證據，而不僅是單一觀點。
+5.  **### 觀課者視角差異分析 (可選)**
+    如果觀察到不同觀課者的「學習與省思」有顯著的差異或有趣的對照，可以簡要提出，這有助於形成更立體的議課討論。
+請開始分析以下整合資料：
+---
+${dataText}
+---`;
+            }
+
+            async function processAndGetAggregatedData() {
+                if (stagedFilesForAggregation.length === 0) throw new Error("請先選擇至少一個TXT檔案進行整合。");
+                const mainAggregatedTeacher = mainAggregatedTeacherNameEl.value.trim();
+                if (!mainAggregatedTeacher) throw new Error("請輸入整合報告的「主要授課教師姓名」，這將用於報告分析。");
+                aggregationProcessStatusEl.textContent = `開始讀取 ${stagedFilesForAggregation.length} 個已選檔案以進行AI分析...`;
+                const allFilesParsedData = [];
+                const readFilePromises = stagedFilesForAggregation.map(stagedFile => {
+                    return new Promise((resolve, reject) => { 
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const parsedData = parseTxtForAggregation(e.target.result, stagedFile.name);
+                                if (parsedData) { allFilesParsedData.push(parsedData); resolve(); } 
+                                else { aggregationProcessStatusEl.textContent += `\n警告: 檔案 ${stagedFile.name} 解析資料為空或失敗，已跳過。`; resolve(); }
+                            } catch (err) { reject(new Error(`解析檔案 ${stagedFile.name} 失敗: ${err.message}`)); }
+                        };
+                        reader.onerror = () => { reject(new Error(`讀取檔案 ${stagedFile.name} 失敗.`)); };
+                        reader.readAsText(stagedFile.fileObject);
+                    });
+                });
+                await Promise.all(readFilePromises);
+                if (allFilesParsedData.length === 0) throw new Error("沒有成功解析的檔案。請檢查檔案格式或內容。");
+                aggregationProcessStatusEl.textContent = `已讀取 ${allFilesParsedData.length} 個檔案。正在準備資料給 AI...`;
+                return { allFilesParsedData, mainAggregatedTeacher };
+            }
+
+            async function handleAggregateAnalysis() {
+                const apiKey = getActiveApiKey();
+                if (!apiKey) { alert('請在輸入框中提供您的 API 金鑰，或等待開發者提供備用金鑰。'); return; }
+                aiModalTitleEl.textContent = 'AI 分析整合報告';
+                aiModalContentEl.innerHTML = `<div class="flex flex-col items-center justify-center"><div class="spinner"></div><p class="mt-4 text-gray-600">正在處理多份檔案並呼叫 AI 進行整合分析，請稍候...</p></div>`;
+                aiAnalysisModalEl.style.display = 'block';
+                try {
+                    const { allFilesParsedData, mainAggregatedTeacher } = await processAndGetAggregatedData();
+                    const aggregationDateStr = new Date().toISOString().split('T')[0];
+                    const dataText = prepareDataForAIAggregate(allFilesParsedData, mainAggregatedTeacher, aggregationDateStr);
+                    const prompt = getAIPromptForAggregate(dataText);
+                    logAction("準備好整合資料，呼叫AI...");
+                    const result = await callGeminiAPI(prompt, apiKey);
+                    logAction("AI整合分析完成。");
+                    aiAnalysisModalEl.dataset.rawText = result; // Store the raw markdown
+                    aiModalContentEl.innerHTML = marked.parse(result);
+                    aggregationProcessStatusEl.textContent = `AI 整合分析完成。`;
+                } catch (error) {
+                    console.error("AI aggregate analysis failed:", error);
+                    aiModalContentEl.innerHTML = `<div class="text-red-600"><p class="font-bold">AI 整合分析失敗</p><p>錯誤訊息：${error.message}</p><p class="mt-2 text-sm">請檢查您的 API 金鑰、檔案內容、網路連線，或查看瀏覽器主控台(F12)獲取更多資訊。</p></div>`;
+                    aggregationProcessStatusEl.textContent = `錯誤: ${error.message}`;
+                }
+            }
+            
+            // --- Import / Export / Aggregation Full Functions ---
+            function exportDataToTxtHandler() { 
+                const data = getBasicObservationData(); 
+                const filename = generateFilenameForSingle(data);
+                let mdContent = `# 學習共同體公開課觀察記錄\n\n## 基本資訊\n| 項目         | 內容             |\n|--------------|------------------|\n| 課程名稱     | ${escapeXml(data.courseName)}    |\n| 授課教師     | ${escapeXml(data.teacher)}        |\n| 觀課班級     | ${escapeXml(data.obsClass)}       |\n| 觀課人員     | ${escapeXml(data.observer)}       |\n| 觀課日期     | ${escapeXml(data.obsDate)}        |\n| 觀課節次     | ${escapeXml(data.periodsText)}    |\n| 小組名稱     | ${escapeXml(data.groupN)}         |\n\n`;
+                if(data.learnings) mdContent+=`## 從這堂課學到理念及方法\n${data.learnings}\n\n`;
+                if(data.reflections) mdContent+=`## 我的省思\n${data.reflections}\n\n`;
+                mdContent += `## 學生資訊\n`; 
+                Object.keys(students).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(sId=>{ const student = students[sId]; if (student) { mdContent+=`* **座位${sId}**: ${escapeXml(student.name)} (${escapeXml(getRoleDisplayText(student.role))})\n`; } }); 
+                mdContent+="\n";
+                mdContent += `## 觀察記錄 (雙向細目表)\n`;
+                const allObsArray=[];
+                if (localObservations[TEACHER_TARGET_ID] && localObservations[TEACHER_TARGET_ID].length > 0) { localObservations[TEACHER_TARGET_ID].forEach(o => allObsArray.push({ ...o, targetId: TEACHER_TARGET_ID, targetName: '授課教師'})); }
+                Object.keys(localObservations).forEach(tId => { if(tId !== TEACHER_TARGET_ID && students[tId] && localObservations[tId]) { localObservations[tId].forEach(o=>allObsArray.push({...o, targetId:tId, targetName:students[tId].name})) } });
+                if(allObsArray.length===0){ mdContent+="尚無觀察記錄。\n" }
+                else {
+                    const uniqueTimes=[...new Set(allObsArray.map(o=>o.time))].sort();
+                    const targetIdsWithObs=[...new Set(allObsArray.map(o=>o.targetId))].sort((a,b) => a === TEACHER_TARGET_ID ? -1 : b === TEACHER_TARGET_ID ? 1 : parseInt(a) - parseInt(b));
+                    mdContent+=`| 時間 | `;
+                    targetIdsWithObs.forEach(tId => { const name = tId === TEACHER_TARGET_ID ? '授課教師' : `座位${tId}-${escapeXml(students[tId]?.name || '未知').substring(0,10)}`; mdContent+=`${name} | `; });
+                    mdContent+=`\n|:---|`; 
+                    targetIdsWithObs.forEach(()=>mdContent+=`:---|`); 
+                    mdContent+=`\n`;
+                    uniqueTimes.forEach(time=>{
+                        mdContent+=`| ${escapeXml(time)} | `;
+                        targetIdsWithObs.forEach(tId=>{
+                            const obsForCell=allObsArray.filter(o=>o.targetId===tId&&o.time===time);
+                            let cellContent="";
+                            obsForCell.forEach(o=>{ const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === o.type); const exportTypeString = obsTypeObj ? obsTypeObj.displayShort : o.type.split(":")[0]; cellContent+=`${escapeXml(exportTypeString)}: ${escapeXml(o.content).replace(/\n/g,'<br>')}<br>`; });
+                            mdContent+=`${cellContent.trim()} | `;
+                        });
+                        mdContent+=`\n`;
+                    });
+                }
+                const blob = new Blob([mdContent],{type:'text/plain;charset=utf-8'}); 
+                const url=URL.createObjectURL(blob);
+                const a=document.createElement('a');a.href=url;a.download=`${filename}.txt`; 
+                document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+                alert('觀課記錄已匯出為 TXT 檔。');
+                logAction(`匯出單筆資料為 TXT: ${filename}.txt`);
+            }
+
+            function exportDataToDocHandler() {
+                const data = getBasicObservationData();
+                const filename = generateFilenameForSingle(data) + ".doc";
+                let studentInfoRowsHtml = "";
+                const sortedStudentKeys = Object.keys(students).sort((a, b) => parseInt(a) - parseInt(b));
+                sortedStudentKeys.forEach((studentId, index) => {
+                    const studentData = students[studentId];
+                    const isLastStudentRow = index === sortedStudentKeys.length - 1;
+                    studentInfoRowsHtml += `<tr style='mso-yfti-irow:${index + 1}${isLastStudentRow && sortedStudentKeys.length > 0 ? ';mso-yfti-lastrow:yes' : ''}'><td width="25%" valign=top style='width:25.54%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>座位${escapeXml(studentId)}</span></p></td><td width="24%" valign=top style='width:24.82%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${studentData ? escapeXml(studentData.name) : '&nbsp;'}</p></td><td width="24%" valign=top style='width:24.82%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${studentData ? escapeXml(getRoleDisplayText(studentData.role)) : '&nbsp;'}</p></td><td width="24%" valign=top style='width:24.82%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>&nbsp;</p></td></tr>`;
+                });
+                if (sortedStudentKeys.length === 0) { studentInfoRowsHtml = `<tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td colspan="4" valign=top style='border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>尚無學生資訊</span></p></td></tr>`; }
+                const allObsArray = [];
+                if (localObservations[TEACHER_TARGET_ID] && localObservations[TEACHER_TARGET_ID].length > 0) { localObservations[TEACHER_TARGET_ID].forEach(o => allObsArray.push({ ...o, targetId: TEACHER_TARGET_ID, targetName: '授課教師'})); }
+                Object.keys(localObservations).forEach(tId => { if(tId !== TEACHER_TARGET_ID && students[tId] && localObservations[tId]) { localObservations[tId].forEach(o=>allObsArray.push({...o, targetId:tId, targetName:students[tId].name})) } });
+                const uniqueTimes = [...new Set(allObsArray.map(o => o.time))].sort();
+                let obsTableHeaderHtml = "";
+                const studentKeysForObsTable = Object.keys(students).sort((a, b) => parseInt(a) - parseInt(b)), numStudentCols = studentKeysForObsTable.length;
+                const timeColWidthPct = 12; let teacherColWidthPct = 18; let studentColWidthPct = 0;
+                if (numStudentCols > 0) {
+                    studentColWidthPct = parseFloat(((100 - timeColWidthPct - teacherColWidthPct) / numStudentCols).toFixed(2));
+                    if (studentColWidthPct < 10 && numStudentCols > 4) { teacherColWidthPct = Math.max(10, teacherColWidthPct - ( (10 - studentColWidthPct) * numStudentCols ) / 2 ); studentColWidthPct = parseFloat(((100 - timeColWidthPct - teacherColWidthPct) / numStudentCols).toFixed(2)); }
+                    if (studentColWidthPct < 5 && numStudentCols > 0) studentColWidthPct = 5; 
+                    if (numStudentCols * studentColWidthPct + teacherColWidthPct + timeColWidthPct > 100) { const overflow = (numStudentCols * studentColWidthPct + teacherColWidthPct + timeColWidthPct) - 100, totalDynamicWidth = numStudentCols * studentColWidthPct + teacherColWidthPct; if (totalDynamicWidth > 0) { teacherColWidthPct -= overflow * (teacherColWidthPct / totalDynamicWidth); studentColWidthPct -= overflow * (studentColWidthPct / totalDynamicWidth); } }
+                } else { teacherColWidthPct = 100 - timeColWidthPct; }
+                obsTableHeaderHtml = `<tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="${timeColWidthPct}%" valign=top style='width:${timeColWidthPct}%;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>時間</span></p></td><td width="${teacherColWidthPct}%" valign=top style='width:${teacherColWidthPct}%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>授課教師</span></p></td>`;
+                studentKeysForObsTable.forEach(sId => { obsTableHeaderHtml += `<td width="${studentColWidthPct}%" valign=top style='width:${studentColWidthPct}%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>座位${escapeXml(sId)}-${escapeXml(students[sId]?.name || `學生${sId}`).substring(0,10)}</span></p></td>`; });
+                obsTableHeaderHtml += `</tr>`;
+                let observationRowsHtml = "";
+                if (uniqueTimes.length === 0 && allObsArray.filter(o => o.targetId === TEACHER_TARGET_ID).length === 0 && studentKeysForObsTable.length === 0) { const totalColsForEmptyState = 2 + numStudentCols; observationRowsHtml = `<tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td colspan="${totalColsForEmptyState > 0 ? totalColsForEmptyState : 1}" valign=top style='border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>尚無觀察記錄</p></td></tr>`;
+                } else {
+                    uniqueTimes.forEach((time, timeIndex) => {
+                        const isLastObsRow = timeIndex === uniqueTimes.length - 1;
+                        let rowHtml = `<tr style='mso-yfti-irow:${timeIndex + 1}${isLastObsRow && uniqueTimes.length > 0 ? ";mso-yfti-lastrow:yes" : ""}'>`;
+                        rowHtml += `<td width="${timeColWidthPct}%" valign=top style='width:${timeColWidthPct}%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(time)}</p></td>`;
+                        let teacherCellContent = "";
+                        allObsArray.filter(o => o.targetId === TEACHER_TARGET_ID && o.time === time).forEach(o => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === o.type); const displayType = obsTypeObj ? obsTypeObj.displayShort : o.type.split(":")[0]; teacherCellContent += `${escapeXml(displayType)}: ${escapeXml(o.content).replace(/\n/g, '<br>')}<br>`; });
+                        rowHtml += `<td width="${teacherColWidthPct}%" valign=top style='width:${teacherColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${teacherCellContent || "&nbsp;"}</p></td>`;
+                        studentKeysForObsTable.forEach(sId => {
+                            let studentCellContent = "";
+                            allObsArray.filter(o => o.targetId === sId && o.time === time).forEach(o => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === o.type); const displayType = obsTypeObj ? obsTypeObj.displayShort : o.type.split(":")[0]; studentCellContent += `${escapeXml(displayType)}: ${escapeXml(o.content).replace(/\n/g, '<br>')}<br>`; });
+                            rowHtml += `<td width="${studentColWidthPct}%" valign=top style='width:${studentColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${studentCellContent || "&nbsp;"}</p></td>`;
+                        });
+                        rowHtml += `</tr>`;
+                        observationRowsHtml += rowHtml;
+                    });
+                     if (uniqueTimes.length === 0 && (allObsArray.filter(o => o.targetId === TEACHER_TARGET_ID).length > 0 || studentKeysForObsTable.length > 0 )) {
+                        let rowHtml = `<tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td width="${timeColWidthPct}%" valign=top style='width:${timeColWidthPct}%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>&nbsp;</p></td>`;
+                        let teacherCellContent = "";
+                        allObsArray.filter(o => o.targetId === TEACHER_TARGET_ID).forEach(o => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === o.type); const displayType = obsTypeObj ? obsTypeObj.displayShort : o.type.split(":")[0]; teacherCellContent += `${escapeXml(o.time || 'N/A')} - ${escapeXml(displayType)}: ${escapeXml(o.content).replace(/\n/g, '<br>')}<br>`; });
+                        rowHtml += `<td width="${teacherColWidthPct}%" valign=top style='width:${teacherColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${teacherCellContent || "&nbsp;"}</p></td>`;
+                        studentKeysForObsTable.forEach(sId => { rowHtml += `<td width="${studentColWidthPct}%" valign=top style='width:${studentColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>&nbsp;</p></td>`; });
+                        rowHtml += `</tr>`;
+                        observationRowsHtml = rowHtml;
+                    }
+                }
+                const mhtmlContent = `<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv=Content-Type content="text/html; charset=utf-8"><meta name=ProgId content=Word.Document><!--[if gte mso 9]><xml><o:DocumentProperties><o:Author>${escapeXml(data.observer)}</o:Author><o:LastAuthor>${escapeXml(data.observer)}</o:LastAuthor><o:Revision>1</o:Revision><o:TotalTime>0</o:TotalTime><o:Created>${new Date().toISOString()}</o:Created><o:LastSaved>${new Date().toISOString()}</o:LastSaved><o:Pages>1</o:Pages><o:Version>16.00</o:Version></o:DocumentProperties><o:OfficeDocumentSettings><o:AllowPNG/></o:OfficeDocumentSettings></xml><![endif]--><style>@font-face{font-family:標楷體;panose-1:2 2 5 0 0 0 0 0 0 0;mso-font-alt:PMingLiU;mso-font-charset:136;mso-generic-font-family:roman;mso-font-pitch:variable;mso-font-signature:-1610611969 684719354 22 0 1048577 0}@font-face{font-family:"Cambria Math";panose-1:2 4 5 3 5 4 6 3 2 4;mso-font-charset:0;mso-generic-font-family:roman;mso-font-pitch:variable;mso-font-signature:3 0 0 0 1 0}@font-face{font-family:"\@標楷體";panose-1:2 1 6 1 0 1 1 1 1 1;mso-font-charset:136;mso-generic-font-family:roman;mso-font-pitch:variable;mso-font-signature:-1610611969 684719354 22 0 1048577 0}p.MsoNormal,li.MsoNormal,div.MsoNormal{mso-style-unhide:no;mso-style-qformat:yes;mso-style-parent:"";margin:0cm;mso-pagination:none;font-size:10.0pt;font-family:"標楷體",serif;mso-ascii-font-family:標楷體;mso-fareast-font-family:標楷體;mso-hansi-font-family:標楷體;mso-bidi-font-family:"Times New Roman";mso-bidi-theme-font:minor-bidi;mso-font-kerning:1.0pt}.MsoChpDefault{mso-style-type:export-only;mso-default-props:yes;font-family:"標楷體",serif;mso-ascii-font-family:標楷體;mso-fareast-font-family:標楷體;mso-hansi-font-family:標楷體;mso-bidi-font-family:"Times New Roman";mso-bidi-theme-font:minor-bidi}.MsoPapDefault{mso-style-type:export-only;mso-pagination:none}@page WordSection1{size:792.0pt 612.0pt;margin:36.0pt 36.0pt 36.0pt 36.0pt;mso-header-margin:35.4pt;mso-footer-margin:35.4pt;mso-paper-source:0;layout-grid:18.0pt}div.WordSection1{page:WordSection1}</style><!--[if gte mso 10]><style>table.MsoNormalTable{mso-style-name:表格內文;mso-tstyle-rowband-size:0;mso-tstyle-colband-size:0;mso-style-noshow:yes;mso-style-priority:99;mso-style-parent:"";mso-padding-alt:0cm 5.4pt 0cm 5.4pt;mso-para-margin:0cm;mso-pagination:none;font-size:10.0pt;font-family:"標楷體",serif;mso-bidi-font-family:"Times New Roman"}table.MsoTableGrid{mso-style-name:表格格線;mso-tstyle-rowband-size:0;mso-tstyle-colband-size:0;mso-style-priority:39;mso-style-unhide:no;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;mso-padding-alt:0cm 5.4pt 0cm 5.4pt;mso-border-insideh:.5pt solid windowtext;mso-border-insidev:.5pt solid windowtext;mso-para-margin:0cm;mso-pagination:none;font-size:10.0pt;font-family:"標楷體",serif;mso-bidi-font-family:"Times New Roman"}</style><![endif]--></head><body lang=ZH-TW style='tab-interval:24.0pt;word-wrap:break-word;text-justify-trim:punctuation'><div class=WordSection1 style='layout-grid:18.0pt'><p class=MsoNormal align=center style='text-align:center'><b><span style='font-size:20.0pt;font-family:"標楷體",serif'>學習共同體公開課觀察表</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;mso-yfti-tbllook:1184;mso-padding-alt:0cm 5.4pt 0cm 5.4pt'><tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="16%" valign=top style='width:16.66%;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>課程名稱</span></p></td><td width="16%" valign=top style='width:16.66%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(data.courseName)}</p></td><td width="16%" valign=top style='width:16.68%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>授課教師</span></p></td><td width="16%" valign=top style='width:16.66%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(data.teacher)}</p></td><td width="16%" valign=top style='width:16.66%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課班級</span></p></td><td width="16%" valign=top style='width:16.68%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(data.obsClass)}</p></td></tr><tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td width="16%" valign=top style='width:16.66%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課人員</span></p></td><td width="16%" valign=top style='width:16.66%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(data.observer)}</p></td><td width="16%" valign=top style='width:16.68%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課日期</span></p></td><td width="16%" valign=top style='width:16.66%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(data.obsDate)}</p></td><td width="16%" valign=top style='width:16.66%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課節次</span></p></td><td width="16%" valign=top style='width:16.68%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(data.periodsText)}</p></td></tr></table><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>學生資訊 (小組: ${escapeXml(data.groupN)})</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;mso-yfti-tbllook:1184;mso-padding-alt:0cm 5.4pt 0cm 5.4pt'><tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="25%" valign=top style='width:25.54%;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>座位序號</span></p></td><td width="24%" valign=top style='width:24.82%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>學生姓名</span></p></td><td width="24%" valign=top style='width:24.82%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>學生角色</span></p></td><td width="24%" valign=top style='width:24.82%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>備註</span></p></td></tr>${studentInfoRowsHtml}</table><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>觀察記錄 (雙向細目表)</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;mso-yfti-tbllook:1184;mso-padding-alt:0cm 5.4pt 0cm 5.4pt'>${obsTableHeaderHtml}${observationRowsHtml}</table><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>學習與省思</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;mso-yfti-tbllook:1184;mso-padding-alt:0cm 5.4pt 0cm 5.4pt'><tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="50%" valign=top style='width:50.0%;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>從這堂課學到理念及方法</span></p></td><td width="50%" valign=top style='width:50.0%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>我的省思</span></p></td></tr><tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td width="50%" valign=top style='width:50.0%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${(data.learnings || '').replace(/\n/g, '<br>') || '&nbsp;'}</p></td><td width="50%" valign=top style='width:50.0%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${(data.reflections || '').replace(/\n/g, '<br>') || '&nbsp;'}</p></td></tr></table></div></body></html>`;
+                const blob = new Blob([mhtmlContent], { type: 'application/msword;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); URL.revokeObjectURL(url);
+                alert('觀課記錄已匯出為 DOC 檔。');
+                logAction(`匯出單筆資料為 DOC: ${filename}`);
+            }
+            
+            function processSingleTxtImport(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                if (!confirm(`確定要匯入TXT檔 "${file.name}"嗎？這將會覆蓋目前所有未儲存的單筆記錄資料。`)) { event.target.value = ''; return; }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        parseAndApplyTxtDataToSingleRecord(e.target.result);
+                        alert(`TXT檔 "${file.name}" 已成功匯入至當前單筆記錄。`);
+                        logAction(`從TXT檔匯入單筆資料: ${file.name}`);
+                    } catch (error) {
+                        console.error("Error parsing TXT for single record:", error);
+                        alert(`匯入失敗：無法解析TXT檔案。錯誤: ${error.message}`);
+                        logAction(`單筆TXT檔匯入失敗: ${file.name}, 錯誤: ${error.message}`);
+                    } finally { event.target.value = ''; }
+                };
+                reader.onerror = function() { alert(`讀取檔案失敗: ${reader.error}`); logAction(`讀取TXT檔失敗: ${file.name}, 錯誤: ${reader.error}`); event.target.value = ''; };
+                reader.readAsText(file);
+            }
+
+            function parseAndApplyTxtDataToSingleRecord(txtContent) {
+                students = {}; localObservations = {}; localObservations[TEACHER_TARGET_ID] = []; selectedTargetIds = []; selectedObservationTypeFullString = ""; 
+                obsIdCounter = 0; rowCount = DEFAULT_ROW_COUNT; colCount = DEFAULT_COL_COUNT; groupName = "";
+                courseNameEl.value = ''; teacherEl.value = ''; observationClassEl.value = ''; observerNameEl.value = ''; observationDateEl.value = new Date().toISOString().split('T')[0];
+                observationPeriodsContainerEl.querySelectorAll('.period-btn.selected').forEach(btn => btn.classList.remove('selected'));
+                learningsEl.value = ''; reflectionsEl.value = ''; rowCountEl.value = rowCount; colCountEl.value = colCount; groupNameEl.value = groupName;
+                observationContentEl.value = ''; selectedObservationTypeHiddenEl.value = "";
+                observationTypeButtonsContainerEl.querySelectorAll('.selected').forEach(b => b.classList.remove('selected'));
+                fourLearningModeButtonsContainerEl.querySelectorAll('.selected').forEach(b => b.classList.remove('selected'));
+                const lines = txtContent.split('\n');
+                let currentSection = "", obsTableHeaders = [], obsTableTargetIds = [], tempLearnings = "", tempReflections = "";
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (line.startsWith("## ")) {
+                        currentSection = line.substring(3).trim();
+                        if (currentSection !== "從這堂課學到理念及方法" && tempLearnings) { learningsEl.value = tempLearnings.trim(); tempLearnings = ""; }
+                        if (currentSection !== "我的省思" && tempReflections) { reflectionsEl.value = tempReflections.trim(); tempReflections = ""; }
+                        return; 
+                    }
+                    if (currentSection === "") return; 
+                    if (line === "" && (currentSection === "從這堂課學到理念及方法" || currentSection === "我的省思")) {
+                         if (currentSection === "從這堂課學到理念及方法") tempLearnings += "\n";
+                         if (currentSection === "我的省思") tempReflections += "\n";
+                         return;
+                    }
+                    if (line === "") return;
+                    switch (currentSection) {
+                        case "基本資訊":
+                            if (line.startsWith("|") && !line.startsWith("|--")) {
+                                const parts = line.split("|").map(p => p.trim()).filter(p => p);
+                                if (parts.length === 2) {
+                                    const key = parts[0], value = parts[1];
+                                    if (key === "課程名稱") courseNameEl.value = value;
+                                    else if (key === "授課教師") teacherEl.value = value;
+                                    else if (key === "觀課班級") observationClassEl.value = value;
+                                    else if (key === "觀課人員") observerNameEl.value = value;
+                                    else if (key === "觀課日期") observationDateEl.value = value;
+                                    else if (key === "小組名稱") { groupNameEl.value = value; groupName = value; }
+                                    else if (key === "觀課節次") { const periods = value.split(',').map(p => p.trim()); observationPeriodsContainerEl.querySelectorAll('.period-btn').forEach(btn => { btn.classList.toggle('selected', periods.includes(btn.dataset.period)); }); }
+                                }
+                            }
+                            break;
+                        case "從這堂課學到理念及方法": tempLearnings += (tempLearnings ? "\n" : "") + line; break;
+                        case "我的省思": tempReflections += (tempReflections ? "\n" : "") + line; break;
+                        case "學生資訊":
+                            if (line.startsWith("* **座位")) { 
+                                const match = line.match(/\* \*\*座位(\d+)\*\*: (.*?)\s+\((.*?)\)/); 
+                                if (match) {
+                                    const seatId = match[1], studentName = match[2].trim(), roleName = match[3].trim();
+                                    if (!students[seatId]) students[seatId] = {name: `學生${seatId}`, role: 'none'};
+                                    students[seatId].name = studentName; students[seatId].role = findRoleIdByName(roleName); 
+                                }
+                            }
+                            break;
+                        case "觀察記錄 (雙向細目表)":
+                            if (line.startsWith("| 時間 |")) { 
+                                obsTableHeaders = line.split("|").map(h => h.trim()).filter(h => h);
+                                obsTableTargetIds = obsTableHeaders.slice(1).map(header => {
+                                    if (header.toLowerCase().includes('授課教師')) return TEACHER_TARGET_ID;
+                                    const match = header.match(/座位(\d+)/); 
+                                    return match ? match[1] : null; 
+                                }).filter(id => id);
+                            } else if (line.startsWith("|:---|")) {}
+                            else if (line.startsWith("|")) { 
+                                const cells = line.split("|").map(c => c.trim()), time = cells[1]; 
+                                cells.slice(2, cells.length - 1).forEach((cellContent, index) => { 
+                                    const targetId = obsTableTargetIds[index];
+                                    if (targetId && cellContent) {
+                                        cellContent.split('<br>').map(obsStr => obsStr.trim()).filter(obsStr => obsStr).forEach(obsStr => {
+                                            const parts = obsStr.split(':'); 
+                                            if (parts.length >= 2) {
+                                                const obsTypeShortOrFull = parts[0].trim(), obsText = parts.slice(1).join(':').trim(), obsTypeFull = findFullObsType(obsTypeShortOrFull); 
+                                                if (!localObservations[targetId]) localObservations[targetId] = [];
+                                                obsIdCounter++; 
+                                                localObservations[targetId].push({ obsId: `imported-${Date.now()}-${obsIdCounter}`, time: time, type: obsTypeFull, content: obsText, timestamp: Date.now() });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            break;
+                    }
+                });
+                if (tempLearnings) learningsEl.value = tempLearnings.trim();
+                if (tempReflections) reflectionsEl.value = tempReflections.trim();
+                const studentIdsFromImport = Object.keys(students).map(id => parseInt(id));
+                if(studentIdsFromImport.length > 0) {
+                    const maxSeatNum = Math.max(...studentIdsFromImport);
+                    let bestFitRows = 1, bestFitCols = 1, minDiff = Infinity;
+                    for(let r = 1; r <= 5; r++){ for(let c = 1; c <= 5; c++){ if(r * c >= maxSeatNum) { if((r*c - maxSeatNum) < minDiff) { minDiff = r*c - maxSeatNum; bestFitRows = r; bestFitCols = c; } else if ((r*c - maxSeatNum) === minDiff) { if (Math.abs(r-c) < Math.abs(bestFitRows - bestFitCols)) { bestFitRows = r; bestFitCols = c; } } } } }
+                    rowCountEl.value = bestFitRows; colCountEl.value = bestFitCols; rowCount = bestFitRows; colCount = bestFitCols;
+                }
+                displayGroupNameEl.textContent = groupName || '未命名小組';
+                initializeSeating(); updateLocalObservationsPreview();
+            }
+
+            function findFullObsType(searchText) {
+                searchText = searchText.trim();
+                let found = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === searchText || ot.displayShort === searchText); 
+                if (found) return found.fullType;
+                const codeNameMatch = searchText.match(/^\(([A-Za-z0-9]+)\)(.*)/);
+                if (codeNameMatch) { const code = codeNameMatch[1], namePart = codeNameMatch[2].replace(":", "").trim(); found = ALL_OBSERVATION_TYPES.find(ot => ot.code === code && ot.name === namePart); if (found) return found.fullType; }
+                const codeOnlyMatch = searchText.match(/^\(([A-Za-z0-9]+)\)$/);
+                if (codeOnlyMatch) { found = ALL_OBSERVATION_TYPES.find(ot => ot.code === codeOnlyMatch[1]); if (found) return found.fullType; }
+                found = ALL_OBSERVATION_TYPES.find(ot => ot.name === searchText); if (found) return found.fullType;
+                found = ALL_OBSERVATION_TYPES.find(ot => ot.fullType.includes(searchText));
+                return found ? found.fullType : searchText; 
+            }
+
+            function findRoleIdByName(roleName) {
+                roleName = roleName.trim();
+                const defaultRolesMap = { '無角色': 'none', '促進者': 'facilitator', '支持者': 'supporter', '表達者': 'expresser', '反思者': 'reflector' };
+                if (defaultRolesMap[roleName]) return defaultRolesMap[roleName];
+                const currentCustomRolesToSearch = (typeof customRoles !== 'undefined' && customRoles.length > 0) ? customRoles : [];
+                const custom = currentCustomRolesToSearch.find(r => r.name === roleName);
+                return custom ? custom.id : 'none'; 
+            }
+            
+            async function handleFullAggregationAndExport(exportType = 'txt') { 
+                if (stagedFilesForAggregation.length === 0) { alert("請先選擇至少一個TXT檔案進行整合。"); aggregationProcessStatusEl.textContent = "請先選擇至少一個TXT檔案進行整合。"; return; }
+                const mainAggregatedTeacher = mainAggregatedTeacherNameEl.value.trim();
+                if (!mainAggregatedTeacher) { alert("請輸入整合報告的「主要授課教師姓名」，這將用於檔案命名。"); aggregationProcessStatusEl.textContent = "請先輸入主要授課教師姓名。"; return; }
+                aggregationProcessStatusEl.textContent = `開始讀取 ${stagedFilesForAggregation.length} 個已選檔案...`;
+                const allFilesParsedData = [];
+                const readFilePromises = stagedFilesForAggregation.map(stagedFile => {
+                    return new Promise((resolve) => { 
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const parsedData = parseTxtForAggregation(e.target.result, stagedFile.name);
+                                if (parsedData) { allFilesParsedData.push(parsedData); } 
+                                else { aggregationProcessStatusEl.textContent += `\n警告: 檔案 ${stagedFile.name} 解析資料為空或失敗，已跳過。`; }
+                            } catch (err) { console.error(`解析檔案 ${stagedFile.name} 失敗:`, err); aggregationProcessStatusEl.textContent += `\n錯誤: 解析檔案 ${stagedFile.name} 失敗 (${err.message})，已跳過。`;
+                            } finally { resolve(); }
+                        };
+                        reader.onerror = () => { console.error(`讀取檔案 ${stagedFile.name} 失敗.`); aggregationProcessStatusEl.textContent += `\n錯誤: 讀取檔案 ${stagedFile.name} 失敗，已跳過。`; resolve(); };
+                        reader.readAsText(stagedFile.fileObject);
+                    });
+                });
+                await Promise.all(readFilePromises);
+                if (allFilesParsedData.length === 0) { aggregationProcessStatusEl.textContent = "沒有成功解析的檔案。請檢查檔案格式或內容。"; logAction(`多檔整合 (${exportType.toUpperCase()}): 無成功解析檔案。`); return; }
+                aggregationProcessStatusEl.textContent = `已讀取 ${allFilesParsedData.length} 個檔案。開始整合資料...`;
+                let baseFile = allFilesParsedData.find(f => f.basicInfo && (Object.keys(f.students).length > 0 || (f.observations[TEACHER_TARGET_ID] && f.observations[TEACHER_TARGET_ID].length > 0) ));
+                if (!baseFile) baseFile = allFilesParsedData[0]; 
+                if (!baseFile) { aggregationProcessStatusEl.textContent = "所有已解析的檔案都無法作為基準 (缺少基本資訊或角色)。"; return; }
+                const reportBaseBasicInfo = JSON.parse(JSON.stringify(baseFile.basicInfo || {})), reportBaseStudents = JSON.parse(JSON.stringify(baseFile.students || {}));
+                const fullAggregatedObservations = {}; 
+                if (!fullAggregatedObservations[TEACHER_TARGET_ID]) fullAggregatedObservations[TEACHER_TARGET_ID] = {};
+                allFilesParsedData.forEach(fileData => {
+                    if (fileData.observations[TEACHER_TARGET_ID]) {
+                        if (!fullAggregatedObservations[TEACHER_TARGET_ID]) fullAggregatedObservations[TEACHER_TARGET_ID] = {};
+                        fileData.observations[TEACHER_TARGET_ID].forEach(obs => {
+                             if (!fullAggregatedObservations[TEACHER_TARGET_ID][obs.time]) fullAggregatedObservations[TEACHER_TARGET_ID][obs.time] = [];
+                            fullAggregatedObservations[TEACHER_TARGET_ID][obs.time].push({ observerFilename: fileData.filename, observerName: fileData.basicInfo.observer || fileData.filename, originalTeacher: fileData.basicInfo.teacher, originalGroup: fileData.basicInfo.groupN, type: obs.type, content: obs.content });
+                        });
+                    }
+                    Object.keys(fileData.observations).forEach(targetIdFromFile => {
+                        if (targetIdFromFile === TEACHER_TARGET_ID) return; 
+                        if (reportBaseStudents[targetIdFromFile] || Object.keys(reportBaseStudents).length === 0) { 
+                             if (!reportBaseStudents[targetIdFromFile] && Object.keys(reportBaseStudents).length === 0) { reportBaseStudents[targetIdFromFile] = fileData.students[targetIdFromFile] || { name: `學生${targetIdFromFile}*`, role: 'none'}; }
+                            if (!fullAggregatedObservations[targetIdFromFile]) fullAggregatedObservations[targetIdFromFile] = {};
+                            fileData.observations[targetIdFromFile].forEach(obs => {
+                                if (!fullAggregatedObservations[targetIdFromFile][obs.time]) fullAggregatedObservations[targetIdFromFile][obs.time] = [];
+                                fullAggregatedObservations[targetIdFromFile][obs.time].push({ observerFilename: fileData.filename, observerName: fileData.basicInfo.observer || fileData.filename, originalTeacher: fileData.basicInfo.teacher, originalGroup: fileData.basicInfo.groupN, type: obs.type, content: obs.content });
+                            });
+                        } else { console.warn(`學生 ${targetIdFromFile} (來自 ${fileData.filename}) 不在基準學生列表 ${Object.keys(reportBaseStudents).join(',')} 中，其觀察記錄將被忽略。`); aggregationProcessStatusEl.textContent += `\n警告: 學生 ${targetIdFromFile} (來自 ${fileData.filename}) 的觀察記錄被忽略，因其不在基準座位表中。`; }
+                    });
+                });
+                const aggregationDateStr = new Date().toISOString().split('T')[0];
+                if (exportType === 'txt') { generateSingleAggregatedTxtReport(fullAggregatedObservations, reportBaseBasicInfo, reportBaseStudents, allFilesParsedData, mainAggregatedTeacherName, aggregationDateStr); } 
+                else if (exportType === 'doc') { generateSingleAggregatedDocReport(fullAggregatedObservations, reportBaseBasicInfo, reportBaseStudents, allFilesParsedData, mainAggregatedTeacherName, aggregationDateStr); }
+                aggregationProcessStatusEl.textContent += `\n整合報告 (${exportType.toUpperCase()}) 已產生。`;
+                alert(`整合報告 (${exportType.toUpperCase()}) 已產生。`);
+                logAction(`完整整合 ${exportType.toUpperCase()} 報告成功產生。`);
+            }
+
+            function parseTxtForAggregation(txtContent, filename) {
+                const parsed = { filename: filename, basicInfo: { observer: filename, teacher: '', courseName: '', obsClass: '', obsDate: '', periodsText: '', groupN: '未分組' }, students: {}, observations: {}, learnings: "", reflections: "" };
+                parsed.observations[TEACHER_TARGET_ID] = []; 
+                let tempObsIdCounter = 0; 
+                const lines = txtContent.split('\n');
+                let currentSection = "", obsTableHeaders = [], obsTableTargetIds = [], tempLearnings = "", tempReflections = "";
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (line.startsWith("## ")) {
+                        currentSection = line.substring(3).trim();
+                        if (currentSection !== "從這堂課學到理念及方法" && tempLearnings) { parsed.learnings = tempLearnings.trim(); tempLearnings = ""; }
+                        if (currentSection !== "我的省思" && tempReflections) { parsed.reflections = tempReflections.trim(); tempReflections = ""; }
+                        return;
+                    }
+                    if (currentSection === "") return;
+                    if (line === "" && (currentSection === "從這堂課學到理念及方法" || currentSection === "我的省思")) {
+                         if (currentSection === "從這堂課學到理念及方法") tempLearnings += "\n";
+                         if (currentSection === "我的省思") tempReflections += "\n";
+                         return;
+                    }
+                    if (line === "") return;
+                    switch (currentSection) {
+                        case "基本資訊":
+                            if (line.startsWith("|") && !line.startsWith("|--")) {
+                                const parts = line.split("|").map(p => p.trim()).filter(p => p);
+                                if (parts.length === 2) {
+                                    const key = parts[0], value = parts[1];
+                                    if (key === "課程名稱") parsed.basicInfo.courseName = value;
+                                    else if (key === "授課教師") parsed.basicInfo.teacher = value; 
+                                    else if (key === "觀課班級") parsed.basicInfo.obsClass = value;
+                                    else if (key === "觀課人員") parsed.basicInfo.observer = value || filename;
+                                    else if (key === "觀課日期") parsed.basicInfo.obsDate = value;
+                                    else if (key === "小組名稱") parsed.basicInfo.groupN = value.trim() || '未分組'; 
+                                    else if (key === "觀課節次") parsed.basicInfo.periodsText = value;
+                                }
+                            }
+                            break;
+                        case "從這堂課學到理念及方法": tempLearnings += (tempLearnings ? "\n" : "") + line; break;
+                        case "我的省思": tempReflections += (tempReflections ? "\n" : "") + line; break;
+                        case "學生資訊": 
+                            if (line.startsWith("* **座位")) {
+                                const match = line.match(/\* \*\*座位(\d+)\*\*: (.*?)\s+\((.*?)\)/); 
+                                if (match) {
+                                    const seatId = match[1], studentName = match[2].trim(), roleName = match[3].trim();
+                                    parsed.students[seatId] = { name: studentName, role: findRoleIdByName(roleName) };
+                                }
+                            }
+                            break;
+                        case "觀察記錄 (雙向細目表)":
+                            if (line.startsWith("| 時間 |")) {
+                                obsTableHeaders = line.split("|").map(h => h.trim()).filter(h => h);
+                                obsTableTargetIds = obsTableHeaders.slice(1).map(header => {
+                                    if (header.toLowerCase().includes('授課教師')) return TEACHER_TARGET_ID;
+                                    const match = header.match(/座位(\d+)/); 
+                                    return match ? match[1] : null; 
+                                }).filter(id => id);
+                            } else if (line.startsWith("|:---|")) {}
+                            else if (line.startsWith("|")) {
+                                const cells = line.split("|").map(c => c.trim()), time = cells[1];
+                                cells.slice(2, cells.length - 1).forEach((cellContent, index) => {
+                                    const targetId = obsTableTargetIds[index];
+                                    if (targetId && cellContent) {
+                                        if (!parsed.observations[targetId]) parsed.observations[targetId] = [];
+                                        cellContent.split('<br>').map(obsStr => obsStr.trim()).filter(obsStr => obsStr).forEach(obsStr => {
+                                            const parts = obsStr.split(':'); 
+                                            if (parts.length >= 2) {
+                                                const obsTypeShortOrFull = parts[0].trim(), obsText = parts.slice(1).join(':').trim(), obsTypeFull = findFullObsType(obsTypeShortOrFull); 
+                                                tempObsIdCounter++;
+                                                parsed.observations[targetId].push({ obsId: `agg-${filename}-${targetId}-${tempObsIdCounter}`, time: time, type: obsTypeFull, content: obsText, timestamp: Date.now() });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            break;
+                    }
+                });
+                if (tempLearnings) parsed.learnings = tempLearnings.trim();
+                if (tempReflections) parsed.reflections = tempReflections.trim();
+                if (!parsed.basicInfo.groupN || parsed.basicInfo.groupN.trim() === "") parsed.basicInfo.groupN = '未分組';
+                return parsed;
+            }
+            
+            function generateSingleAggregatedTxtReport(fullAggregatedObservations, reportBaseBasicInfo, reportBaseStudents, allFilesParsedData, mainAggregatedTeacherName, aggregationDateStr) {
+                const filename = generateFilenameForFullAggregation(mainAggregatedTeacherName, aggregationDateStr);
+                let mdContent = `# 學習共同體公開課觀察記錄 - 整合報告\n\n## 報告基本資訊 (整合日期: ${escapeXml(aggregationDateStr)})\n| 項目 | 內容 (以首個有效檔案為參考) |\n|---|---|\n| 授課教師(依檔名) | ${escapeXml(mainAggregatedTeacherName)} |\n| 課程名稱 | ${escapeXml(reportBaseBasicInfo.courseName) || '未提供'} |\n| 觀課班級 | ${escapeXml(reportBaseBasicInfo.obsClass) || '未提供'} |\n| 觀課日期 | ${escapeXml(reportBaseBasicInfo.obsDate) || '未提供'} |\n| 觀課節次 | ${escapeXml(reportBaseBasicInfo.periodsText) || '未提供'} |\n| 小組名稱 | ${escapeXml(reportBaseBasicInfo.groupN) || '未分組'} |\n| 本報告整合自 | ${allFilesParsedData.length} 份觀察記錄 |\n\n`;
+                mdContent += `## 學生座位表(以首個有效檔案為基準，*號表示後續加入)\n`;
+                const sortedStudentIdsForTable = Object.keys(reportBaseStudents).sort((a, b) => parseInt(a) - parseInt(b));
+                if (sortedStudentIdsForTable.length > 0) { sortedStudentIdsForTable.forEach(sId => { const student = reportBaseStudents[sId]; if (student) { mdContent += `* **座位${sId}**: ${escapeXml(student.name) || "未知姓名"} (${escapeXml(getRoleDisplayText(student.role))})\n`; } }); } else { mdContent += "無學生座位表資訊。\n"; }
+                mdContent += "\n## 整合觀察記錄(雙向細目表)\n";
+                const allTimesAcrossFiles = new Set();
+                Object.values(fullAggregatedObservations).forEach(targetObsByTime => { Object.keys(targetObsByTime).forEach(time => allTimesAcrossFiles.add(time)); });
+                const uniqueTimesSorted = Array.from(allTimesAcrossFiles).sort(), tableColumnsTargetIds = [TEACHER_TARGET_ID, ...sortedStudentIdsForTable];
+                if (uniqueTimesSorted.length === 0 && (!fullAggregatedObservations[TEACHER_TARGET_ID] || Object.keys(fullAggregatedObservations[TEACHER_TARGET_ID]).length === 0) && sortedStudentIdsForTable.length === 0 ) { mdContent += "尚無整合觀察記錄。\n"; } 
+                else {
+                    mdContent += `| 時間 | `;
+                    tableColumnsTargetIds.forEach(tId => { const name = tId === TEACHER_TARGET_ID ? '授課教師' : `座位${tId}-${escapeXml(reportBaseStudents[tId]?.name || "未知").substring(0,10)}`; mdContent += `${name} | `; });
+                    mdContent += `\n|:---|`; tableColumnsTargetIds.forEach(() => mdContent += `:---|`); mdContent += `\n`;
+                    uniqueTimesSorted.forEach(time => {
+                        mdContent += `| ${escapeXml(time)} | `;
+                        tableColumnsTargetIds.forEach(tId => { 
+                            const obsForCellAtTime = fullAggregatedObservations[tId]?.[time] || [];
+                            let cellContent = "";
+                            if (obsForCellAtTime.length > 0) { obsForCellAtTime.forEach(obsEntry => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obsEntry.type); const exportTypeString = obsTypeObj ? obsTypeObj.displayShort : obsEntry.type.split(":")[0]; cellContent += `**[${escapeXml(obsEntry.observerName)}]** (原師: ${escapeXml(obsEntry.originalTeacher)}, 原組: ${escapeXml(obsEntry.originalGroup)}) ${escapeXml(exportTypeString)}: ${escapeXml(obsEntry.content).replace(/\n/g, ' ')}<br>`; }); }
+                            mdContent += `${cellContent.trim()} | `;
+                        });
+                        mdContent += `\n`;
+                    });
+                }
+                mdContent += "\n## 個別檔案學習與省思\n";
+                if (allFilesParsedData.length > 0) {
+                    allFilesParsedData.forEach(fileData => {
+                        mdContent += `### 來源檔案: ${escapeXml(fileData.filename)}\n(授課教師: ${escapeXml(fileData.basicInfo.teacher) || '未知'}, 班級: ${escapeXml(fileData.basicInfo.obsClass) || '未知'}, 小組: ${escapeXml(fileData.basicInfo.groupN) || '未分組'}, 觀課員: ${escapeXml(fileData.basicInfo.observer) || escapeXml(fileData.filename)})\n\n`;
+                        mdContent += `**從這堂課學到理念及方法:**\n${(fileData.learnings && fileData.learnings.trim() !== "") ? fileData.learnings : '(未提供)'}\n\n`;
+                        mdContent += `**我的省思:**\n${(fileData.reflections && fileData.reflections.trim() !== "") ? fileData.reflections : '(未提供)'}\n\n---\n\n`;
+                    });
+                } else { mdContent += "無學習與省思記錄可供整合。\n"; }
+                const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `${filename}.txt`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            }
+
+            function generateSingleAggregatedDocReport(fullAggregatedObservations, reportBaseBasicInfo, reportBaseStudents, allFilesParsedData, mainAggregatedTeacherName, aggregationDateStr) {
+                const filename = generateFilenameForFullAggregation(mainAggregatedTeacherName, aggregationDateStr) + ".doc";
+                let studentInfoRowsHtml = "";
+                const sortedBaseStudentKeys = Object.keys(reportBaseStudents).sort((a, b) => parseInt(a) - parseInt(b));
+                sortedBaseStudentKeys.forEach((studentId, index) => {
+                    const studentData = reportBaseStudents[studentId], isLastAggStudentRow = index === sortedBaseStudentKeys.length - 1;
+                    studentInfoRowsHtml += `<tr style='mso-yfti-irow:${index + 1}${isLastAggStudentRow && sortedBaseStudentKeys.length > 0 ? ';mso-yfti-lastrow:yes' : ''}'><td width="25%" valign=top style='width:25.54%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>座位${escapeXml(studentId)}</span></p></td><td width="24%" valign=top style='width:24.82%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${studentData ? escapeXml(studentData.name) : '&nbsp;'}</p></td><td width="24%" valign=top style='width:24.82%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${studentData ? escapeXml(getRoleDisplayText(studentData.role)) : '&nbsp;'}</p></td><td width="24%" valign=top style='width:24.82%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>&nbsp;</p></td></tr>`;
+                });
+                if (sortedBaseStudentKeys.length === 0) { studentInfoRowsHtml = `<tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td colspan="4" valign=top style='border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>尚無學生資訊</span></p></td></tr>`; }
+                const allTimesAcrossFiles = new Set();
+                Object.values(fullAggregatedObservations).forEach(targetObsByTime => { Object.keys(targetObsByTime).forEach(time => allTimesAcrossFiles.add(time)); });
+                const uniqueTimesSorted = Array.from(allTimesAcrossFiles).sort();
+                let obsTableHeaderHtmlAgg = "";
+                const studentKeysForAggObsTable = Object.keys(reportBaseStudents).sort((a, b) => parseInt(a) - parseInt(b)), numAggStudentCols = studentKeysForAggObsTable.length;
+                const aggTimeColWidthPct = 12; let aggTeacherColWidthPct = 18; let aggStudentColWidthPct = 0;
+                if (numAggStudentCols > 0) {
+                    aggStudentColWidthPct = parseFloat(((100 - aggTimeColWidthPct - aggTeacherColWidthPct) / numAggStudentCols).toFixed(2));
+                     if (aggStudentColWidthPct < 10 && numAggStudentCols > 4) { aggTeacherColWidthPct = Math.max(10, aggTeacherColWidthPct - ( (10 - aggStudentColWidthPct) * numAggStudentCols ) / 2 ); aggStudentColWidthPct = parseFloat(((100 - aggTimeColWidthPct - aggTeacherColWidthPct) / numAggStudentCols).toFixed(2)); }
+                    if (aggStudentColWidthPct < 5 && numAggStudentCols > 0) aggStudentColWidthPct = 5;
+                     if (numAggStudentCols * aggStudentColWidthPct + aggTeacherColWidthPct + aggTimeColWidthPct > 100) { const overflow = (numAggStudentCols * aggStudentColWidthPct + aggTeacherColWidthPct + aggTimeColWidthPct) - 100, totalDynamicWidth = numAggStudentCols * aggStudentColWidthPct + aggTeacherColWidthPct; if (totalDynamicWidth > 0) { aggTeacherColWidthPct -= overflow * (aggTeacherColWidthPct / totalDynamicWidth); aggStudentColWidthPct -= overflow * (aggStudentColWidthPct / totalDynamicWidth); } }
+                } else { aggTeacherColWidthPct = 100 - aggTimeColWidthPct; }
+                obsTableHeaderHtmlAgg = `<tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="${aggTimeColWidthPct}%" valign=top style='width:${aggTimeColWidthPct}%;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>時間</span></p></td><td width="${aggTeacherColWidthPct}%" valign=top style='width:${aggTeacherColWidthPct}%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>授課教師</span></p></td>`;
+                studentKeysForAggObsTable.forEach(sId => { obsTableHeaderHtmlAgg += `<td width="${aggStudentColWidthPct}%" valign=top style='width:${aggStudentColWidthPct}%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>座位${escapeXml(sId)}-${escapeXml(reportBaseStudents[sId]?.name || `學生${sId}`).substring(0,10)}</span></p></td>`; });
+                obsTableHeaderHtmlAgg += `</tr>`;
+                let observationRowsHtmlAgg = "";
+                if (uniqueTimesSorted.length === 0 && (!fullAggregatedObservations[TEACHER_TARGET_ID] || Object.keys(fullAggregatedObservations[TEACHER_TARGET_ID]).length === 0) && studentKeysForAggObsTable.length === 0) { const totalAggColsForEmptyState = 2 + numAggStudentCols; observationRowsHtmlAgg = `<tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td colspan="${totalAggColsForEmptyState > 0 ? totalAggColsForEmptyState : 1}" valign=top style='border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>尚無整合觀察記錄</p></td></tr>`; } 
+                else {
+                    uniqueTimesSorted.forEach((time, timeIndex) => {
+                        const isLastAggObsRow = timeIndex === uniqueTimesSorted.length - 1;
+                        let rowHtml = `<tr style='mso-yfti-irow:${timeIndex + 1}${isLastAggObsRow && uniqueTimesSorted.length > 0 ? ";mso-yfti-lastrow:yes" : ""}'>`;
+                        rowHtml += `<td width="${aggTimeColWidthPct}%" valign=top style='width:${aggTimeColWidthPct}%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(time)}</p></td>`;
+                        let teacherCellContent = "";
+                        const teacherObsForTime = fullAggregatedObservations[TEACHER_TARGET_ID]?.[time] || [];
+                        teacherObsForTime.forEach(obsEntry => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obsEntry.type); const displayType = obsTypeObj ? obsTypeObj.displayShort : obsEntry.type.split(":")[0]; teacherCellContent += `<b>[${escapeXml(obsEntry.observerName)}]</b> (原師: ${escapeXml(obsEntry.originalTeacher)}, 原組: ${escapeXml(obsEntry.originalGroup)}) ${escapeXml(displayType)}: ${escapeXml(obsEntry.content).replace(/\n/g, '<br>')}<br>`; });
+                        rowHtml += `<td width="${aggTeacherColWidthPct}%" valign=top style='width:${aggTeacherColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${teacherCellContent || "&nbsp;"}</p></td>`;
+                        studentKeysForAggObsTable.forEach(sId => {
+                            let studentCellContent = "";
+                            const studentObsForTime = fullAggregatedObservations[sId]?.[time] || [];
+                            studentObsForTime.forEach(obsEntry => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obsEntry.type); const displayType = obsTypeObj ? obsTypeObj.displayShort : obsEntry.type.split(":")[0]; studentCellContent += `<b>[${escapeXml(obsEntry.observerName)}]</b> (原師: ${escapeXml(obsEntry.originalTeacher)}, 原組: ${escapeXml(obsEntry.originalGroup)}) ${escapeXml(displayType)}: ${escapeXml(obsEntry.content).replace(/\n/g, '<br>')}<br>`; });
+                            rowHtml += `<td width="${aggStudentColWidthPct}%" valign=top style='width:${aggStudentColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${studentCellContent || "&nbsp;"}</p></td>`;
+                        });
+                        rowHtml += `</tr>`;
+                        observationRowsHtmlAgg += rowHtml;
+                    });
+                     if (uniqueTimesSorted.length === 0 && ( (fullAggregatedObservations[TEACHER_TARGET_ID] && Object.keys(fullAggregatedObservations[TEACHER_TARGET_ID]).length > 0) || studentKeysForAggObsTable.length > 0) ) {
+                        let rowHtml = `<tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td width="${aggTimeColWidthPct}%" valign=top style='width:${aggTimeColWidthPct}%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>&nbsp;</p></td>`;
+                        let teacherCellContent = "";
+                        Object.values(fullAggregatedObservations[TEACHER_TARGET_ID] || {}).flat().forEach(obsEntry => { const obsTypeObj = ALL_OBSERVATION_TYPES.find(ot => ot.fullType === obsEntry.type); const displayType = obsTypeObj ? obsTypeObj.displayShort : obsEntry.type.split(":")[0]; teacherCellContent += `<b>[${escapeXml(obsEntry.observerName)}]</b> (原師: ${escapeXml(obsEntry.originalTeacher)}, 原組: ${escapeXml(obsEntry.originalGroup)}) ${escapeXml(displayType)}: ${escapeXml(obsEntry.content).replace(/\n/g, '<br>')}<br>`; });
+                        rowHtml += `<td width="${aggTeacherColWidthPct}%" valign=top style='width:${aggTeacherColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${teacherCellContent || "&nbsp;"}</p></td>`;
+                        studentKeysForAggObsTable.forEach(sId => { rowHtml += `<td width="${aggStudentColWidthPct}%" valign=top style='width:${aggStudentColWidthPct}%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>&nbsp;</p></td>`; });
+                        rowHtml += `</tr>`;
+                        observationRowsHtmlAgg = rowHtml;
+                    }
+                }
+                let individualLearningsReflectionsHtml = "";
+                if (allFilesParsedData.length > 0) {
+                    allFilesParsedData.forEach(fileData => {
+                        individualLearningsReflectionsHtml += `<p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>來源檔案: ${escapeXml(fileData.filename)}</span></b></p><p class=MsoNormal><span style='font-family:"標楷體",serif'>(授課教師: ${escapeXml(fileData.basicInfo.teacher) || '未知'}, 班級: ${escapeXml(fileData.basicInfo.obsClass) || '未知'}, 小組: ${escapeXml(fileData.basicInfo.groupN) || '未分組'}, 觀課員: ${escapeXml(fileData.basicInfo.observer) || escapeXml(fileData.filename)})</span></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;mso-yfti-tbllook:1184;mso-padding-alt:0cm 5.4pt 0cm 5.4pt; margin-bottom:12.0pt;'>
+                        <tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="50%" valign=top style='width:50.0%;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>從這堂課學到理念及方法</span></p></td><td width="50%" valign=top style='width:50.0%;border:solid windowtext 1.0pt;border-left:none;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>我的省思</span></p></td></tr>
+                        <tr style='mso-yfti-irow:1;mso-yfti-lastrow:yes'><td width="50%" valign=top style='width:50.0%;border:solid windowtext 1.0pt;border-top:none;mso-border-top-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${(fileData.learnings || '').replace(/\n/g, '<br>') || '&nbsp;'}</p></td><td width="50%" valign=top style='width:50.0%;border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;mso-border-top-alt:solid windowtext .5pt;mso-border-left-alt:solid windowtext .5pt;mso-border-alt:solid windowtext .5pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${(fileData.reflections || '').replace(/\n/g, '<br>') || '&nbsp;'}</p></td></tr></table><p class=MsoNormal><span lang=EN-US style='font-size:1.0pt;mso-bidi-font-size:1.0pt'><o:p>&nbsp;</o:p></span></p>`;
+                    });
+                } else { individualLearningsReflectionsHtml = "<p class=MsoNormal><span style='font-family:\"標楷體\",serif'>無學習與省思記錄可供整合。</span></p>"; }
+                const mhtmlContent = `<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv=Content-Type content="text/html; charset=utf-8"><meta name=ProgId content=Word.Document><!--[if gte mso 9]><xml><o:DocumentProperties><o:Author>${escapeXml(mainAggregatedTeacherName)}</o:Author><o:LastAuthor>${escapeXml(mainAggregatedTeacherName)}</o:LastAuthor><o:Revision>1</o:Revision><o:TotalTime>0</o:TotalTime><o:Created>${new Date().toISOString()}</o:Created><o:LastSaved>${new Date().toISOString()}</o:LastSaved><o:Pages>1</o:Pages><o:Version>16.00</o:Version></o:DocumentProperties><o:OfficeDocumentSettings><o:AllowPNG/></o:OfficeDocumentSettings></xml><![endif]--><style>@font-face{font-family:標楷體;panose-1:2 2 5 0 0 0 0 0 0 0;mso-font-alt:PMingLiU;mso-font-charset:136;mso-generic-font-family:roman;mso-font-pitch:variable;mso-font-signature:-1610611969 684719354 22 0 1048577 0} @font-face{font-family:"\@標楷體";panose-1:2 1 6 1 0 1 1 1 1 1;mso-font-charset:136;mso-generic-font-family:roman;mso-font-pitch:variable;mso-font-signature:-1610611969 684719354 22 0 1048577 0} p.MsoNormal,li.MsoNormal,div.MsoNormal{mso-style-unhide:no;mso-style-qformat:yes;mso-style-parent:"";margin:0cm;mso-pagination:none;font-size:10.0pt;font-family:"標楷體",serif;} .MsoChpDefault{mso-style-type:export-only;font-family:"標楷體",serif;} .MsoPapDefault{mso-style-type:export-only;mso-pagination:none;} @page WordSection1{size:792.0pt 612.0pt;margin:36.0pt 36.0pt 36.0pt 36.0pt;mso-header-margin:35.4pt;mso-footer-margin:35.4pt;mso-paper-source:0;layout-grid:18.0pt;} div.WordSection1{page:WordSection1;}</style><!--[if gte mso 10]><style>table.MsoTableGrid{mso-style-name:表格格線;mso-tstyle-rowband-size:0;mso-tstyle-colband-size:0;mso-style-priority:39;mso-style-unhide:no;border:solid windowtext 1.0pt;mso-border-alt:solid windowtext .5pt;mso-padding-alt:0cm 5.4pt 0cm 5.4pt;mso-border-insideh:.5pt solid windowtext;mso-border-insidev:.5pt solid windowtext;mso-para-margin:0cm;mso-pagination:none;font-size:10.0pt;font-family:"標楷體",serif;}</style><![endif]--></head><body lang=ZH-TW style='tab-interval:24.0pt;word-wrap:break-word;text-justify-trim:punctuation'><div class=WordSection1 style='layout-grid:18.0pt'><p class=MsoNormal align=center style='text-align:center'><b><span style='font-size:20.0pt;font-family:"標楷體",serif'>學習共同體公開課觀察記錄 (整合報告)</span></b></p><p class=MsoNormal><span lang=EN-US><o:p>&nbsp;</o:p></span></p><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>報告基本資訊 (整合日期: ${escapeXml(aggregationDateStr)})</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;'>
+                <tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="30%" valign=top style='width:30%;border:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>項目</span></p></td><td width="70%" valign=top style='width:70%;border:solid windowtext 1.0pt;border-left:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>內容 (以首個有效檔案為參考)</span></p></td></tr>
+                <tr style='mso-yfti-irow:1'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>授課教師(依檔名)</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(mainAggregatedTeacherName)}</p></td></tr>
+                <tr style='mso-yfti-irow:2'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>課程名稱</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(reportBaseBasicInfo.courseName) || '未提供'}</p></td></tr>
+                <tr style='mso-yfti-irow:3'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課班級</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(reportBaseBasicInfo.obsClass) || '未提供'}</p></td></tr>
+                <tr style='mso-yfti-irow:4'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課日期</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(reportBaseBasicInfo.obsDate) || '未提供'}</p></td></tr>
+                <tr style='mso-yfti-irow:5'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>觀課節次</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(reportBaseBasicInfo.periodsText) || '未提供'}</p></td></tr>
+                <tr style='mso-yfti-irow:6'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>小組名稱</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${escapeXml(reportBaseBasicInfo.groupN) || '未分組'}</p></td></tr>
+                <tr style='mso-yfti-irow:7;mso-yfti-lastrow:yes'><td style='border:solid windowtext 1.0pt;border-top:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>本報告整合自</span></p></td><td style='border-top:none;border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal>${allFilesParsedData.length} 份觀察記錄</p></td></tr>
+                </table><p class=MsoNormal><span lang=EN-US><o:p>&nbsp;</o:p></span></p><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>學生座位表(以首個有效檔案為基準，*號表示後續加入)</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;'>
+                <tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'><td width="25%" valign=top style='width:25%;border:solid windowtext 1.0pt;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>座位序號</span></p></td><td width="25%" valign=top style='width:25%;border:solid windowtext 1.0pt;border-left:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>學生姓名</span></p></td><td width="25%" valign=top style='width:25%;border:solid windowtext 1.0pt;border-left:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>學生角色</span></p></td><td width="25%" valign=top style='width:25%;border:solid windowtext 1.0pt;border-left:none;padding:0cm 5.4pt 0cm 5.4pt'><p class=MsoNormal><span style='font-family:"標楷體",serif'>備註</span></p></td></tr>
+                ${studentInfoRowsHtml}
+                </table><p class=MsoNormal><span lang=EN-US><o:p>&nbsp;</o:p></span></p><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>整合觀察記錄(雙向細目表)</span></b></p><table class=MsoTableGrid border=1 cellspacing=0 cellpadding=0 width="100%" style='width:100.0%;border-collapse:collapse;border:none;mso-border-alt:solid windowtext .5pt;'>
+                ${obsTableHeaderHtmlAgg}${observationRowsHtmlAgg}
+                </table><p class=MsoNormal><span lang=EN-US><o:p>&nbsp;</o:p></span></p><p class=MsoNormal><b><span style='font-size:14.0pt;font-family:"標楷體",serif'>個別檔案學習與省思</span></b></p>${individualLearningsReflectionsHtml}</div></body></html>`;
+                const blob = new Blob([mhtmlContent], { type: 'application/msword;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            }
+            
+            initializeAllDataAndUI(); 
+        });
+    </script>
+</body>
+</html>

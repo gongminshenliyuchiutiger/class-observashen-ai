@@ -94,6 +94,7 @@
 
         input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea, select { display: block; width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem; line-height: 1.25rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; box-shadow: inset 0 1px 2px 0 rgba(0,0,0,0.05); transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
         input:focus, textarea:focus, select:focus { outline: 2px solid transparent; outline-offset: 2px; border-color: #2563eb; box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25); }
+        input:disabled { background-color: #e5e7eb; cursor: not-allowed; }
         label { display: block; font-size: 0.875rem; font-weight: 500; color: #475569; margin-bottom: 0.25rem; }
         .fa-icon-spacing { margin-right: 0.3em; } 
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.25rem; margin-bottom: 0.25rem; background-color: #f8fafc; }
@@ -261,15 +262,20 @@
             <!-- AI Analysis for Single Record Section -->
             <section class="card mt-8">
                 <h2 class="section-header"><i class="fas fa-magic fa-icon-spacing"></i>AI 智慧分析 (單筆記錄)</h2>
-                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6" role="alert">
-                   <p>AI 分析會優先使用您在下方輸入的 API 金鑰。若留空，將使用系統內建的備用金鑰。建議申請並使用自己的免費金鑰以獲得更穩定的服務。</p>
-               </div>
+                <div id="aiApiInfoBox" class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6" role="alert">
+                   <p id="aiApiInfoText">為使用 AI 分析功能，請先前往 Google AI Studio 申請並貼上您的免費 API 金鑰。此金鑰將僅儲存在您的瀏覽器中，不會上傳至任何伺服器。</p>
+                </div>
                <div>
-                   <div class="flex items-center">
-                       <label for="geminiApiKey" class="!mb-0">您的 Google Gemini API 金鑰 (選填)</label>
-                       <button id="getApiKeyBtn" class="info-btn" title="如何取得 API 金鑰？"><i class="fas fa-question-circle"></i></button>
+                   <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                           <label for="geminiApiKey" class="!mb-0">您的 Google Gemini API 金鑰 (必填)</label>
+                           <a href="#" id="getApiKeyBtn" class="text-sm text-blue-600 hover:underline ml-2" title="如何取得 API 金鑰？">(如何取得)</a>
+                        </div>
+                        <a href="#" id="enableBackupKey" class="text-gray-400 hover:text-gray-600" title="無法取得金鑰？點此啟用備用金鑰">
+                            <i class="fas fa-cog"></i>
+                        </a>
                    </div>
-                   <input type="text" id="geminiApiKey" placeholder="貼上您的 API 金鑰，若留空則使用備用金鑰">
+                   <input type="text" id="geminiApiKey" placeholder="請貼上您從 Google AI Studio 取得的 API 金鑰">
                </div>
                <div class="mt-6">
                    <button id="analyzeSingleBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md transition-colors"><i class="fas fa-robot fa-icon-spacing"></i>AI 分析上方本筆記錄</button>
@@ -413,7 +419,8 @@
             let customRoles = []; 
             let selectedObservationTypeFullString = "";
             let obsIdCounter = 0;
-            let stagedFilesForAggregation = []; 
+            let stagedFilesForAggregation = [];
+            let isBackupKeyEnabled = false; // New state for backup key
 
             // --- Constants ---
             const OTHER_OBSERVATION_TYPE = { code: "O", name: "其他", fullType: "(O)其他: 其他觀察", displayShort: "(O)其他" };
@@ -442,7 +449,7 @@
             const TEACHER_TARGET_ID = 'teacher';
 
             // --- DOM Elements ---
-            const courseNameEl = document.getElementById('courseName'), teacherEl = document.getElementById('teacher'), observationClassEl = document.getElementById('observationClass'), observerNameEl = document.getElementById('observerName'), observationDateEl = document.getElementById('observationDate'), observationPeriodsContainerEl = document.getElementById('observationPeriods'), learningsEl = document.getElementById('learnings'), reflectionsEl = document.getElementById('reflections'), rowCountEl = document.getElementById('rowCount'), colCountEl = document.getElementById('colCount'), groupNameEl = document.getElementById('groupName'), newRoleNameEl = document.getElementById('newRoleName'), customRolesContainerEl = document.getElementById('customRoles'), seatingContainerEl = document.getElementById('seatingContainer'), teacherSeatEl = document.getElementById('teacherSeat'), displayGroupNameEl = document.getElementById('displayGroupName'), studentInfoEditSectionEl = document.getElementById('studentInfoEdit'), selectedStudentCountDisplayEl = document.getElementById('selectedStudentCountDisplay'), studentEditFormContainerEl = document.getElementById('studentEditFormContainer'), currentSelectionDisplayEl = document.getElementById('currentSelectionDisplay'), observationTimeEl = document.getElementById('observationTime'), observationContentEl = document.getElementById('observationContent'), selectedObservationTypeHiddenEl = document.getElementById('selectedObservationType'), observationTypeButtonsContainerEl = document.getElementById('observationTypeButtons'), fourLearningModeButtonsContainerEl = document.getElementById('fourLearningModeButtons'), localObservationsPreviewTableEl = document.getElementById('localObservationsPreviewTable'), noLocalObservationsEl = document.getElementById('noLocalObservations'), addObservationButtonEl = document.getElementById('addObservationBtn'), importSingleTxtFileEl = document.getElementById('importSingleTxtFile'), editModalEl = document.getElementById('editObservationModal'), editObsTimeEl = document.getElementById('editObsTime'), editObsTypeEl = document.getElementById('editObsType'), editObsContentEl = document.getElementById('editObsContent'), editingObsTargetIdEl = document.getElementById('editingObsTargetId'), generalObsInfoModalEl = document.getElementById('generalObsInfoModal'), generalObsInfoBtnEl = document.getElementById('generalObsInfoBtn'), closeGeneralObsInfoModalBtnEl = document.getElementById('closeGeneralObsInfoModal'), geminiApiKeyEl = document.getElementById('geminiApiKey'), analyzeSingleBtn = document.getElementById('analyzeSingleBtn'), analyzeAggregatedBtn = document.getElementById('analyzeAggregatedBtn'), aiAnalysisModalEl = document.getElementById('aiAnalysisModal'), aiModalTitleEl = document.getElementById('aiModalTitle'), aiModalContentEl = document.getElementById('aiModalContent'), closeAiModalBtn = document.getElementById('closeAiModal'), copyAiResultBtn = document.getElementById('copyAiResultBtn'), mainAggregatedTeacherNameEl = document.getElementById('mainAggregatedTeacherName'), importMultipleTxtFilesForAggregationEl = document.getElementById('importMultipleTxtFilesForAggregation'), triggerSelectMultipleTxtBtnEl = document.getElementById('triggerSelectMultipleTxtBtn'), stagedFilesListEl = document.getElementById('stagedFilesList'), noStagedFilesMsgEl = document.getElementById('noStagedFilesMsg'), stagedFileCountEl = document.getElementById('stagedFileCount'), startAggregationTxtBtnEl = document.getElementById('startAggregationTxtBtn'), startAggregationDocBtnEl = document.getElementById('startAggregationDocBtn'), aggregationProcessStatusEl = document.getElementById('aggregationProcessStatus'), getApiKeyBtn = document.getElementById('getApiKeyBtn'), apiKeyInfoModalEl = document.getElementById('apiKeyInfoModal'), closeApiKeyModalBtn = document.getElementById('closeApiKeyModal');
+            const courseNameEl = document.getElementById('courseName'), teacherEl = document.getElementById('teacher'), observationClassEl = document.getElementById('observationClass'), observerNameEl = document.getElementById('observerName'), observationDateEl = document.getElementById('observationDate'), observationPeriodsContainerEl = document.getElementById('observationPeriods'), learningsEl = document.getElementById('learnings'), reflectionsEl = document.getElementById('reflections'), rowCountEl = document.getElementById('rowCount'), colCountEl = document.getElementById('colCount'), groupNameEl = document.getElementById('groupName'), newRoleNameEl = document.getElementById('newRoleName'), customRolesContainerEl = document.getElementById('customRoles'), seatingContainerEl = document.getElementById('seatingContainer'), teacherSeatEl = document.getElementById('teacherSeat'), displayGroupNameEl = document.getElementById('displayGroupName'), studentInfoEditSectionEl = document.getElementById('studentInfoEdit'), selectedStudentCountDisplayEl = document.getElementById('selectedStudentCountDisplay'), studentEditFormContainerEl = document.getElementById('studentEditFormContainer'), currentSelectionDisplayEl = document.getElementById('currentSelectionDisplay'), observationTimeEl = document.getElementById('observationTime'), observationContentEl = document.getElementById('observationContent'), selectedObservationTypeHiddenEl = document.getElementById('selectedObservationType'), observationTypeButtonsContainerEl = document.getElementById('observationTypeButtons'), fourLearningModeButtonsContainerEl = document.getElementById('fourLearningModeButtons'), localObservationsPreviewTableEl = document.getElementById('localObservationsPreviewTable'), noLocalObservationsEl = document.getElementById('noLocalObservations'), addObservationButtonEl = document.getElementById('addObservationBtn'), importSingleTxtFileEl = document.getElementById('importSingleTxtFile'), editModalEl = document.getElementById('editObservationModal'), editObsTimeEl = document.getElementById('editObsTime'), editObsTypeEl = document.getElementById('editObsType'), editObsContentEl = document.getElementById('editObsContent'), editingObsTargetIdEl = document.getElementById('editingObsTargetId'), generalObsInfoModalEl = document.getElementById('generalObsInfoModal'), generalObsInfoBtnEl = document.getElementById('generalObsInfoBtn'), closeGeneralObsInfoModalBtnEl = document.getElementById('closeGeneralObsInfoModal'), geminiApiKeyEl = document.getElementById('geminiApiKey'), analyzeSingleBtn = document.getElementById('analyzeSingleBtn'), analyzeAggregatedBtn = document.getElementById('analyzeAggregatedBtn'), aiAnalysisModalEl = document.getElementById('aiAnalysisModal'), aiModalTitleEl = document.getElementById('aiModalTitle'), aiModalContentEl = document.getElementById('aiModalContent'), closeAiModalBtn = document.getElementById('closeAiModal'), copyAiResultBtn = document.getElementById('copyAiResultBtn'), mainAggregatedTeacherNameEl = document.getElementById('mainAggregatedTeacherName'), importMultipleTxtFilesForAggregationEl = document.getElementById('importMultipleTxtFilesForAggregation'), triggerSelectMultipleTxtBtnEl = document.getElementById('triggerSelectMultipleTxtBtn'), stagedFilesListEl = document.getElementById('stagedFilesList'), noStagedFilesMsgEl = document.getElementById('noStagedFilesMsg'), stagedFileCountEl = document.getElementById('stagedFileCount'), startAggregationTxtBtnEl = document.getElementById('startAggregationTxtBtn'), startAggregationDocBtnEl = document.getElementById('startAggregationDocBtn'), aggregationProcessStatusEl = document.getElementById('aggregationProcessStatus'), getApiKeyBtn = document.getElementById('getApiKeyBtn'), apiKeyInfoModalEl = document.getElementById('apiKeyInfoModal'), closeApiKeyModalBtn = document.getElementById('closeApiKeyModal'), enableBackupKey = document.getElementById('enableBackupKey'), aiApiInfoBox = document.getElementById('aiApiInfoBox'), aiApiInfoText = document.getElementById('aiApiInfoText');
 
             initializeAllDataAndUI(); 
 
@@ -466,8 +473,13 @@
             closeGeneralObsInfoModalBtnEl.onclick = () => generalObsInfoModalEl.style.display = "none";
             closeAiModalBtn.onclick = () => aiAnalysisModalEl.style.display = "none";
             copyAiResultBtn.addEventListener('click', handleCopyAiResult);
-            getApiKeyBtn.onclick = () => apiKeyInfoModalEl.style.display = 'block';
-            closeApiKeyModalBtn.onclick = () => apiKeyInfoModalEl.style.display = 'none';
+            
+            getApiKeyBtn.onclick = (e) => {
+                e.preventDefault();
+                apiKeyInfoModalEl.style.display = 'block';
+            };
+            
+            closeApiKeyModalBtn.onclick = () => apiKeyInfoModalEl.style.display = "none";
             window.onclick = function(event) { 
                 if (event.target == editModalEl) editModalEl.style.display = "none"; 
                 if (event.target == generalObsInfoModalEl) generalObsInfoModalEl.style.display = "none";
@@ -480,6 +492,19 @@
             importMultipleTxtFilesForAggregationEl.addEventListener('change', handleFileSelectionForAggregation);
             startAggregationTxtBtnEl.addEventListener('click', () => handleFullAggregationAndExport('txt')); 
             startAggregationDocBtnEl.addEventListener('click', () => handleFullAggregationAndExport('doc')); 
+            enableBackupKey.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm("這將啟用系統內建的備用金鑰進行 AI 分析。\n\n此金鑰為多人共用，尖峰時段可能不穩定或無法使用。\n強烈建議您使用自己的免費金鑰以獲得最佳體驗。\n\n確定要啟用備用金鑰嗎？")) {
+                    isBackupKeyEnabled = true;
+                    geminiApiKeyEl.value = '已啟用系統備用金鑰';
+                    geminiApiKeyEl.disabled = true;
+                    aiApiInfoBox.className = 'bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 mb-6';
+                    aiApiInfoText.textContent = '已啟用系統備用金鑰。此金鑰為多人共用，可能不穩定。若要使用自己的金鑰，請重新整理頁面。';
+                    this.style.display = 'none'; // Hide the link after activation
+                    alert('系統備用金鑰已啟用。');
+                    logAction("備用 API 金鑰已啟用。");
+                }
+            });
 
             // --- Utility Functions ---
             function escapeXml(unsafe) { return unsafe === null || typeof unsafe === 'undefined' ? '' : String(unsafe).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]); }
@@ -512,6 +537,15 @@
                 displayGroupNameEl.textContent = '未命名小組'; teacherSeatEl.classList.remove('selected-seat'); logAction("應用程式已初始化/重設。");
                 stagedFilesForAggregation = []; renderStagedFilesList(); mainAggregatedTeacherNameEl.value = '';
                 aggregationProcessStatusEl.textContent = ''; importMultipleTxtFilesForAggregationEl.value = ''; 
+                
+                // Reset API Key section
+                isBackupKeyEnabled = false;
+                geminiApiKeyEl.value = '';
+                geminiApiKeyEl.disabled = false;
+                geminiApiKeyEl.placeholder = "請貼上您從 Google AI Studio 取得的 API 金鑰";
+                aiApiInfoBox.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6';
+                aiApiInfoText.textContent = '為使用 AI 分析功能，請先前往 Google AI Studio 申請並貼上您的免費 API 金鑰。此金鑰將僅儲存在您的瀏覽器中，不會上傳至任何伺服器。';
+                enableBackupKey.style.display = 'inline';
             }
 
             function clearAndResetAllData() { if (confirm("警告：這將清除所有目前輸入的單筆記錄資料並且無法復原。確定要繼續嗎？ (此操作不影響已選擇用於整合的檔案)")) { initializeAllDataAndUI(); alert("所有單筆記錄資料已清除並重設。"); logAction("單筆記錄資料已清除重設。"); } }
@@ -878,8 +912,10 @@
             
             // --- AI Analysis Logic ---
             function getActiveApiKey() {
-                const userApiKey = geminiApiKeyEl.value.trim();
-                return userApiKey || DEFAULT_BACKUP_API_KEY;
+                if (isBackupKeyEnabled) {
+                    return DEFAULT_BACKUP_API_KEY;
+                }
+                return geminiApiKeyEl.value.trim();
             }
 
             function handleCopyAiResult() {
@@ -943,7 +979,7 @@
                         }
                     }
                 }
-                throw new Error('所有模型嘗試均失敗。請檢查您的網路連線，或稍後再試。伺服器可能持續忙碌中。');
+                throw new Error('所有模型嘗試均失敗。請檢查您的網路連線與 API 金鑰是否正確，或稍後再試。伺服器可能持續忙碌中。');
             }
             
             function prepareDataForAISingle() {
@@ -988,7 +1024,11 @@ ${dataText}
 
             async function handleSingleAnalysis() {
                 const apiKey = getActiveApiKey();
-                if (!apiKey) { alert('請在輸入框中提供您的 API 金鑰，或等待開發者提供備用金鑰。'); return; }
+                if (!apiKey) {
+                    alert('請在輸入框中提供您的 Google Gemini API 金鑰才能進行分析。\n點擊「(如何取得)」文字連結可查看教學。');
+                    geminiApiKeyEl.focus();
+                    return;
+                }
                 aiModalTitleEl.textContent = 'AI 分析本筆記錄';
                 aiModalContentEl.innerHTML = `<div class="flex flex-col items-center justify-center"><div class="spinner"></div><p class="mt-4 text-gray-600">正在準備資料並呼叫 AI 進行分析，請稍候...</p></div>`;
                 aiAnalysisModalEl.style.display = 'block';
@@ -1116,7 +1156,11 @@ ${dataText}
 
             async function handleAggregateAnalysis() {
                 const apiKey = getActiveApiKey();
-                if (!apiKey) { alert('請在輸入框中提供您的 API 金鑰，或等待開發者提供備用金鑰。'); return; }
+                if (!apiKey) {
+                    alert('請在輸入框中提供您的 Google Gemini API 金鑰才能進行分析。\n點擊「(如何取得)」文字連結可查看教學。');
+                    geminiApiKeyEl.focus();
+                    return;
+                }
                 aiModalTitleEl.textContent = 'AI 分析整合報告';
                 aiModalContentEl.innerHTML = `<div class="flex flex-col items-center justify-center"><div class="spinner"></div><p class="mt-4 text-gray-600">正在處理多份檔案並呼叫 AI 進行整合分析，請稍候...</p></div>`;
                 aiAnalysisModalEl.style.display = 'block';

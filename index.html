@@ -910,7 +910,7 @@
             }
             
             async function callGeminiAPI(prompt, apiKey) {
-                const modelsToTry = ['gemini-1.5-flash-latest', 'gemini-1.0-pro'];
+                const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash'];
                 const maxRetries = 2, retryDelay = 2000;
                 for (const model of modelsToTry) {
                     for (let attempt = 1; attempt <= maxRetries; attempt++) {
